@@ -2,11 +2,15 @@
   config,
   lib,
   pkgs,
+  yhs-sign,
   ...
-}: {
+}: let
+  ssh-key-baud = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtNdrz/Dwa6K0JL2mrReneEpBo4W6P0Hx8sEX5yZ1+Q hi@sbaudlr.com";
+in {
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
+    ./sign-service.nix
   ];
 
   nix.settings.experimental-features = ["nix-command" "flakes"];
@@ -36,18 +40,25 @@
     extraGroups = ["wheel"];
   };
 
+  # SSH keys.
+  users.users.yhs.openssh.authorizedKeys.keys = [
+    ssh-key-baud
+  ];
+  users.users.root.openssh.authorizedKeys.keys = [
+    ssh-key-baud
+  ];
+
   environment.systemPackages = with pkgs; [
     nano
     vim
-    wget
-    git
-    curl
     htop
-    (callPackage ../yhs-sign.nix {}).default
   ];
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
+
+  # Enable Big Sign.
+  services.yhs-sign.enable = true;
 
   # Firewall configuration.
   networking.firewall.allowedTCPPorts = [22];

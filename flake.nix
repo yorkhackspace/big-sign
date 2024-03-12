@@ -41,10 +41,8 @@
 
         yhs = pkgs.callPackage ./yhs-sign.nix {};
 
-        nativeBuildInputs = with pkgs; [yhs.rustToolchain pkg-config libudev-zero];
-        buildInputs = with pkgs; [
-          yhs.rustToolchain
-        ];
+        nativeBuildInputs = with pkgs; [yhs.rustToolchain] ++ yhs.nativeBuildInputs;
+        buildInputs = with pkgs; [] ++ yhs.buildInputs;
       in
         with pkgs; {
           formatter = pkgs.alejandra;
