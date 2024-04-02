@@ -22,7 +22,13 @@ in {
   boot.loader.generic-extlinux-compatible.enable = true;
 
   networking.hostName = "sign";
-  networking.networkmanager.enable = true;
+  networking.wireless.enable = true;
+  networking.wireless.environmentFile = "/run/secrets/wireless.env";
+  networking.wireless.networks = {
+    "YorkHackspace" = {
+      psk = "@HACKSPACE_PSK@";
+    };
+  };
 
   hardware.enableRedistributableFirmware = true;
 
