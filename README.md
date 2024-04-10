@@ -29,13 +29,28 @@ The request body:
 }
 ```
 
+## Building
+
+the backend is built the normal rust way with `cargo build`, if you want to crossbuild for the pi grab the aarch64-unknown-linux-gnu gcc toolchain and run `cargo build  --target aarch64-unknown-linux-gnu`.
+
+the frontend is built using vite. To build after you clone it:
+
+```
+npm install
+npm run build
+```
+
+you should only have to run npm install once.
 ## Deploying
+
+either use deploy.sh if you are on a unix-like and within the hackspace, or:
 
 * Cross compile for aarch64-unknown-linux-gnu
 * stop the big-sign service on the sign pi, 
 * copy target/aarch64-unknown-linux-gnu/debug/yhs-sign to ~ on the sign pi
 * copy whatever static content stuff has changed to the sign pi
 * log in and restart the systemd service for big-sign.
+
 
 ## Things that need doing (Just a brain-dump)
 - Make the sign rotate through all messages that have been sent to it.
