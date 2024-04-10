@@ -14,6 +14,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     LatencyUnit, ServiceBuilderExt,
+    services::ServeDir,
 };
 
 use crate::{SignCommand, SignScriptLanguage};
@@ -73,11 +74,11 @@ pub fn app(state: AppState) -> Router {
         );
 
     Router::new()
-        .route("/", get(get_index))
         .route("/script", post(post_script_handler))
         .route("/text/:textKey", put(put_text_handler))
         .layer(middleware)
         .with_state(state)
+        .fallback_service(ServeDir::new("static"))
 }
 
 /// Handles a GET to `/`.
