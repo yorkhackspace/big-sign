@@ -3,7 +3,7 @@
 /result
 .DS_Store
 .nova
-
+static
 
 # Logs
 frontend/logs
