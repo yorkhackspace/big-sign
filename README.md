@@ -31,7 +31,11 @@ The request body:
 
 ## Deploying
 
-Cross compile for aarch64-unknown-linux-gnu and then copy target/aarch64-unknown-linux-gnu/debug/yhs-sign to ~ on the sign pi. Then log in and restart the systemd service for big-sign.
+* Cross compile for aarch64-unknown-linux-gnu
+* stop the big-sign service on the sign pi, 
+* copy target/aarch64-unknown-linux-gnu/debug/yhs-sign to ~ on the sign pi
+* copy whatever static content stuff has changed to the sign pi
+* log in and restart the systemd service for big-sign.
 
 ## Things that need doing (Just a brain-dump)
 - Make the sign rotate through all messages that have been sent to it.
