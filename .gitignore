@@ -4,6 +4,7 @@
 .DS_Store
 .nova
 static
+static/*
 
 # Logs
 frontend/logs
