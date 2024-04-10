@@ -31,9 +31,7 @@ The request body:
 
 ## Deploying
 
-From a system running NixOS with appropriate SSH keys set up you can run something like:
-
-`nixos-rebuild switch --target-host root@yhs-sign --flake .#yhs-sign`
+Cross compile for aarch64-unknown-linux-gnu and then copy target/aarch64-unknown-linux-gnu/debug/yhs-sign to ~ on the sign pi. Then log in and restart the systemd service for big-sign.
 
 ## Things that need doing (Just a brain-dump)
 - Make the sign rotate through all messages that have been sent to it.
