@@ -23,6 +23,9 @@ struct Args {
     /// Whether to print serial communication via the logger, rather than trying to talk to a serial port. Commands will be logged at the `trace` log level.
     #[arg(long)]
     fake_serial: bool,
+    // serial port to use to connect to the sign
+    #[arg(long, default_value="/dev/ttyUSB0")]
+    port: String,
 }
 
 #[tokio::main]
@@ -37,7 +40,7 @@ async fn main() {
     let port: Box<dyn SignSerial> = if args.fake_serial {
         Box::new(LoggerSerialPort::default())
     } else {
-        let port = serialport::new("/dev/ttyUSB0", 9600)
+        let port = serialport::new(args.port.as_str(), 9600)
             .timeout(Duration::from_millis(10))
             .parity(serialport::Parity::None)
             .data_bits(serialport::DataBits::Eight)
