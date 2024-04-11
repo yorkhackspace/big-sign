@@ -81,14 +81,6 @@ pub fn app(state: AppState) -> Router {
         .fallback_service(ServeDir::new("static"))
 }
 
-/// Handles a GET to `/`.
-///
-/// # Returns
-/// A HTML string.
-async fn get_index() -> Html<String> {
-    Html(format!("YHS Sign Goes Here"))
-}
-
 /// Parameters for a PUT to `/text/:textKey`.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PutTextParams {
