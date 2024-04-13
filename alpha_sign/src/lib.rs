@@ -29,7 +29,7 @@ impl AlphaSign {
                 for byte in command_section.clone() {
                     sum += byte as u16;
                 }
-                command_section.append(&mut format!("{sum:0<4X}").into_bytes())
+                command_section.append(&mut format!("{sum:0>4X}").into_bytes())
             }
             res.append(&mut command_section);
         }

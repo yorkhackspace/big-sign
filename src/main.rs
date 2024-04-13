@@ -46,7 +46,7 @@ async fn main() {
         .expect("Failed to open port");
 
     let mut yhs_sign = AlphaSign::default();
-    yhs_sign.checksum = false;
+    //yhs_sign.checksum = false;
 
     let (sign_command_tx, sign_command_rx) = tokio::sync::mpsc::unbounded_channel();
 
