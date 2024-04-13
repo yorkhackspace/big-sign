@@ -43,9 +43,6 @@ either use deploy.sh if you are on a unix-like and within the hackspace, or:
 
 ## Things that need doing (Just a brain-dump)
 - Make the sign rotate through all messages that have been sent to it.
-- Make the scripting do things like
-  - Write text to a file and recall later for speedier text drawing e.g. `let text = store_text("Hello"); load_text(text);`.
-- Add more languages for scripting (BASIC, anyone?)
 - Graphics!
 - Other flashy things!
 - ~~re-write it in [insert language of choice here]~~
