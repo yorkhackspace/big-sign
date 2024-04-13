@@ -24,7 +24,9 @@ impl WriteSpecial {
             }
             WriteSpecial::SetDayOfWeek(set_day_of_week) => set_day_of_week.encode(),
             WriteSpecial::SetTimeFormat(set_time_format) => set_time_format.encode(),
-            WriteSpecial::GenerateSpeakerTone(generate_speaker_tone) => generate_speaker_tone.encode(),
+            WriteSpecial::GenerateSpeakerTone(generate_speaker_tone) => {
+                generate_speaker_tone.encode()
+            }
         };
         res.append(&mut inner);
         res
@@ -210,16 +212,14 @@ impl ClearMemoryAndFlash {
 }
 
 pub struct SetDayOfWeek {
-    day: time::Weekday
+    day: time::Weekday,
 }
 
 impl SetDayOfWeek {
     const SPECIAL_LABEL: &'static [u8] = &[0x26];
 
     pub fn new(day: time::Weekday) -> Self {
-        Self{
-            day
-        }
+        Self { day }
     }
 
     fn encode(&self) -> Vec<u8> {
@@ -236,20 +236,17 @@ impl SetDayOfWeek {
         res.push(day);
         res
     }
-
 }
 
 pub struct SetTimeFormat {
-    twenty_four_hour: bool
+    twenty_four_hour: bool,
 }
 
 impl SetTimeFormat {
     const SPECIAL_LABEL: &'static [u8] = &[0x27];
-    
+
     pub fn new(twenty_four_hour: bool) -> Self {
-        Self { 
-            twenty_four_hour
-        }
+        Self { twenty_four_hour }
     }
 
     fn encode(&self) -> Vec<u8> {
@@ -262,14 +259,12 @@ impl SetTimeFormat {
 
         res
     }
-
 }
 
 pub enum ToneError {
     DurationOutOfRange,
-    RepeatsOutOfRange
+    RepeatsOutOfRange,
 }
-
 
 pub struct ProgrammmableTone {
     frequency: u8,
@@ -278,25 +273,33 @@ pub struct ProgrammmableTone {
 }
 
 impl ProgrammmableTone {
-    pub fn new(frequency: u8, duration: u8, repeats: u8) -> Result<Self,ToneError> {
-        if duration>15{
+    pub fn new(frequency: u8, duration: u8, repeats: u8) -> Result<Self, ToneError> {
+        if duration > 15 {
             Err(ToneError::DurationOutOfRange)
-            
-        } else if repeats> 15 {
+        } else if repeats > 15 {
             Err(ToneError::RepeatsOutOfRange)
         } else {
-            Ok(Self{frequency,duration,repeats})
-
+            Ok(Self {
+                frequency,
+                duration,
+                repeats,
+            })
         }
     }
 
     fn encode(&self) -> Vec<u8> {
         let mut res: Vec<u8> = vec![0x32];
-        res.append(&mut format!("{frequency:0<2X}{duration:X}{repeats:X}", frequency = self.frequency, duration = self.duration, repeats = self.repeats).into_bytes());
+        res.append(
+            &mut format!(
+                "{frequency:0<2X}{duration:X}{repeats:X}",
+                frequency = self.frequency,
+                duration = self.duration,
+                repeats = self.repeats
+            )
+            .into_bytes(),
+        );
         res
-    
     }
-
 }
 
 pub enum ToneType {
@@ -304,22 +307,22 @@ pub enum ToneType {
     SpeakerOff,
     Continuous2Seconds,
     ShortBeep2Seconds,
-    ProgrammmableTone {programmable_tone:ProgrammmableTone},
+    ProgrammmableTone {
+        programmable_tone: ProgrammmableTone,
+    },
     StoreProgrammableSound,
     TriggerProgrammableSound,
 }
 
 pub struct GenerateSpeakerTone {
-    tone_type: ToneType
+    tone_type: ToneType,
 }
 
 impl GenerateSpeakerTone {
     const SPECIAL_LABEL: &'static [u8] = &[0x28];
 
-    pub fn new(tone_type:ToneType) -> Self {
-        Self {
-            tone_type
-        }
+    pub fn new(tone_type: ToneType) -> Self {
+        Self { tone_type }
     }
 
     fn encode(&self) -> Vec<u8> {
@@ -329,15 +332,12 @@ impl GenerateSpeakerTone {
             ToneType::SpeakerOff => res.push(0x42),
             ToneType::Continuous2Seconds => res.push(0x30),
             ToneType::ShortBeep2Seconds => res.push(0x31),
-            ToneType::ProgrammmableTone {programmable_tone} => res.append(&mut programmable_tone.encode()),
+            ToneType::ProgrammmableTone { programmable_tone } => {
+                res.append(&mut programmable_tone.encode())
+            }
             ToneType::StoreProgrammableSound => res.push(0x33),
-            ToneType::TriggerProgrammableSound => res.push(0x34)
+            ToneType::TriggerProgrammableSound => res.push(0x34),
         }
         res
-
     }
-
 }
-
-
-
