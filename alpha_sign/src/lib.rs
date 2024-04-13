@@ -3,20 +3,35 @@ pub mod write_special;
 
 pub const BROADCAST: u8 = 0xFF;
 
-pub struct AlphaSign {
+pub struct SignSelector {
     pub sign_type: SignType,
-    pub address: u8, //TODO add support for multiple types and addresses
+    pub address: u8,
+}
+
+pub struct AlphaSign {
+    pub sign_selectors: Vec<SignSelector>,
     pub checksum: bool,
 }
 
 impl AlphaSign {
     pub fn encode(&self, commands: Vec<Command>) -> Vec<u8> {
         let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
-        res.push(self.sign_type as u8);
-        res.push(self.address);
+        for selector in &self.sign_selectors {
+            res.push(selector.sign_type as u8);
+            res.push(selector.address);
+        }
         for command in commands {
-            res.push(0x02); //start of command
-            res.append(&mut command.encode());
+            let mut command_section: Vec<u8> = vec![0x02]; //start of command
+            command_section.append(&mut command.encode());
+            command_section.push(0x03); //end of command
+            if self.checksum {
+                let mut sum: u16 = 0;
+                for byte in command_section.clone() {
+                    sum += byte as u16;
+                }
+                command_section.append(&mut format!("{sum:0<4X}").into_bytes())
+            }
+            res.append(&mut command_section);
         }
         res.push(0x04); //end of transmission
         res
@@ -26,8 +41,10 @@ impl AlphaSign {
 impl Default for AlphaSign {
     fn default() -> Self {
         AlphaSign {
-            sign_type: SignType::All,
-            address: BROADCAST,
+            sign_selectors: vec![SignSelector {
+                sign_type: SignType::All,
+                address: BROADCAST,
+            }],
             checksum: true,
         }
     }
@@ -52,7 +69,7 @@ impl Command {
 #[repr(u8)]
 #[derive(Copy, Clone)]
 pub enum SignType {
-    //TODO visual verification
+    SignWithVisualVerification = 0x21,
     SerialClock = 0x22,
     AlphaVision = 0x23,
     FullMatrixAlphaVision = 0x24,
@@ -98,7 +115,7 @@ pub enum SignType {
     AlphaEclipse1500TimeAndTemp = 0x77,
     AlphaPremiere9000 = 0x78,
     TemperatureProbe = 0x79,
-    //TODO all signs with memory configured for 26 file = 0x7a
+    AllSignsWithMemoryConfiguredFor26Files = 0x7a,
 }
 
 #[cfg(test)]

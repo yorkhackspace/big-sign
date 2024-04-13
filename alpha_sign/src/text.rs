@@ -98,6 +98,7 @@ impl WriteText {
 
     pub fn new(label: char, message: String) -> Self {
         //TODO check lable is valid
+        //TODO make a message type
         Self {
             label,
             message,

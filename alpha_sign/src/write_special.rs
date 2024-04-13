@@ -4,6 +4,7 @@ pub enum WriteSpecial {
     SetTime(SetTime),
     ToggleSpeaker(ToggleSpeaker),
     ConfigureMemory(ConfigureMemory),
+    ClearMemoryAndFlash(ClearMemoryAndFlash),
 }
 
 impl WriteSpecial {
@@ -15,6 +16,9 @@ impl WriteSpecial {
             WriteSpecial::SetTime(set_time) => set_time.encode(),
             WriteSpecial::ToggleSpeaker(toggle_speaker) => toggle_speaker.encode(),
             WriteSpecial::ConfigureMemory(configure_memory) => configure_memory.encode(),
+            WriteSpecial::ClearMemoryAndFlash(clear_memory_and_flash) => {
+                clear_memory_and_flash.encode()
+            }
         };
         res.append(&mut inner);
         res
@@ -182,5 +186,17 @@ impl ConfigureMemory {
             res.append(&mut configuration.encode())
         }
         res
+    }
+}
+
+pub struct ClearMemoryAndFlash {}
+
+impl ClearMemoryAndFlash {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![0x24, 0x24, 0x24, 0x24]
     }
 }
