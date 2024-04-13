@@ -1,7 +1,7 @@
 pub mod text;
 pub mod write_special;
 
-pub const BROADCAST: u8 = 0xFF;
+pub const BROADCAST: u8 = 0x00;
 
 pub struct SignSelector {
     pub sign_type: SignType,
