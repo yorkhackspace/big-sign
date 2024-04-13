@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use alpha_sign::{text::WriteText, Command};
+use alpha_sign::text::WriteText;
 use axum::{
     body::Bytes,
     extract::{Path, State},
@@ -22,7 +22,13 @@ use tower_http::{
 #[derive(Clone)]
 pub struct AppState {
     /// Message channel into which commands can be sent.
-    command_tx: tokio::sync::mpsc::UnboundedSender<Command>,
+    command_tx: tokio::sync::mpsc::UnboundedSender<APICommand>,
+}
+
+/// Enumerates all messages that can be sent from the webserver to the main program.
+/// I don't just use sign commands here because the web server will likely be sending more abstract commands (like "set rotation texts") that are not included in the base sign protocol and handled instead in software.
+pub enum APICommand {
+    WriteText(WriteText),
 }
 
 impl AppState {
@@ -33,7 +39,7 @@ impl AppState {
     ///
     /// # Returns
     /// A new [`AppState`].
-    pub fn new(command_tx: tokio::sync::mpsc::UnboundedSender<Command>) -> Self {
+    pub fn new(command_tx: tokio::sync::mpsc::UnboundedSender<APICommand>) -> Self {
         Self { command_tx }
     }
 }
@@ -114,7 +120,7 @@ async fn put_text_handler(
     if ["test", "lulzbot", "anycubic"].contains(&text_key.as_str()) {
         state
             .command_tx
-            .send(Command::WriteText(WriteText::new('A', body.text)))
+            .send(APICommand::WriteText(WriteText::new('A', body.text)))
             .ok(); // TODO: Handle errors
 
         StatusCode::OK

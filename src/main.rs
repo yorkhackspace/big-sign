@@ -14,6 +14,7 @@ use std::{
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
+use web_server::APICommand;
 
 /// Service for communicating with the YHS sign.
 #[derive(Parser, Debug)]
@@ -91,7 +92,7 @@ fn init_logging() {
 async fn talk_to_sign(
     sign: AlphaSign,
     port: Box<dyn SerialPort>,
-    mut message_rx: tokio::sync::mpsc::UnboundedReceiver<Command>,
+    mut message_rx: tokio::sync::mpsc::UnboundedReceiver<APICommand>,
     cancel: CancellationToken,
 ) {
     // let rhai_engine = make_rhai_engine(sign.clone());
@@ -116,7 +117,7 @@ async fn talk_to_sign(
     }
 }
 
-/// Handle a [`SignCommand`]
+/// Handle a [`APICommand`]
 ///
 /// # Arguments
 /// * `sign`: The sign to send commands to.
@@ -126,16 +127,14 @@ async fn handle_command(
     sign: &AlphaSign,
     port: &tokio::sync::Mutex<Box<dyn SerialPort>>,
     // rhai_engine: &rhai::Engine,
-    command: Command,
+    command: APICommand,
 ) {
     match command {
-        Command::WriteText(text) => {
+        APICommand::WriteText(text) => {
             let mut port_lock = port.lock().await;
             let write_text_command = sign.encode(vec![Command::WriteText(text)]);
             port_lock.write(write_text_command.as_slice()).ok(); // TODO handle errors
         }
-        Command::ReadText(_) => todo!(),
-        Command::WriteSpecial(_) => todo!(),
     }
 }
 
