@@ -261,6 +261,7 @@ impl SetTimeFormat {
     }
 }
 
+#[derive(Debug)]
 pub enum ToneError {
     DurationOutOfRange,
     RepeatsOutOfRange,

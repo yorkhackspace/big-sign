@@ -1639,6 +1639,7 @@ dependencies = [
  "rhai",
  "serde",
  "serialport",
+ "time",
  "tokio",
  "tokio-util",
  "tower",

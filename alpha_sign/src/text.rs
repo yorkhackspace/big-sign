@@ -133,7 +133,7 @@ pub struct ReadText {
 }
 
 impl ReadText {
-    const COMMANDCODE: u8 = 0x41;
+    const COMMANDCODE: u8 = 0x42;
     pub fn new(label: char) -> Self {
         Self { label }
     }

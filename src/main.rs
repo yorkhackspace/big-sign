@@ -38,7 +38,7 @@ async fn main() {
     tracing::info!("🦊 Hello YHS! 🦊");
 
     let port: Box<dyn SerialPort> = serialport::new(args.port.as_str(), args.baudrate)
-        .timeout(Duration::from_millis(10))
+        .timeout(Duration::from_millis(1000))
         .parity(serialport::Parity::None)
         .data_bits(serialport::DataBits::Eight)
         .stop_bits(serialport::StopBits::One)
@@ -96,7 +96,6 @@ async fn talk_to_sign(
     mut message_rx: tokio::sync::mpsc::UnboundedReceiver<APICommand>,
     cancel: CancellationToken,
 ) {
-    // let rhai_engine = make_rhai_engine(sign.clone());
     let port_lock = tokio::sync::Mutex::new(port);
     while !cancel.is_cancelled() {
         select! {

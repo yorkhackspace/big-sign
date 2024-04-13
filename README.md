@@ -48,3 +48,5 @@ either use deploy.sh if you are on a unix-like and within the hackspace, or:
 - ~~re-write it in [insert language of choice here]~~
 - Make the API return useful errors.
 - Maybe expose a socket API for folks who like that sort of thing.
+- sync clocks with the sign on startup
+- expose main message list in the webUI to edit
