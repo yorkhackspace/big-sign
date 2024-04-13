@@ -13,10 +13,10 @@ where
     T: MProtocolCommand,
 {
     fn command_code(&self) -> u8 {
-        T::command_code(&self)
+        T::command_code(self)
     }
 
     fn data(&self) -> Vec<u8> {
-        T::data(&self)
+        T::data(self)
     }
 }

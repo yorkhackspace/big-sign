@@ -3,6 +3,9 @@ name = "yhs-sign"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = [ "alpha_sign"]
+
 [dependencies]
 axum = { version = "0.6.10", features = ["macros"] }
 clap = { version = "4.5.2", features = ["derive"] }

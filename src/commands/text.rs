@@ -28,6 +28,6 @@ impl MProtocolCommand for WriteText {
     }
 
     fn data(&self) -> Vec<u8> {
-        vec![self.file_name.to_string().as_bytes(), self.text.as_bytes()].concat()
+        [self.file_name.to_string().as_bytes(), self.text.as_bytes()].concat()
     }
 }
