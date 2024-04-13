@@ -20,7 +20,7 @@ impl AlphaSign {
             res.push(selector.sign_type as u8);
             res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
         }
-        for command in commands {
+        for command in &commands {
             let mut command_section: Vec<u8> = vec![0x02]; //start of command
             command_section.append(&mut command.encode());
             command_section.push(0x03); //end of command
@@ -32,6 +32,9 @@ impl AlphaSign {
                 command_section.append(&mut format!("{sum:0<4X}").into_bytes())
             }
             res.append(&mut command_section);
+        }
+        if (commands.len() == 1 && self.checksum == false) {
+            res.pop(); // remove trailing 0x03 if it isn't needed (this breaks otherwise for some reason)
         }
         res.push(0x04); //end of transmission
         res

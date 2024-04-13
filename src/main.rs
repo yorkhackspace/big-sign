@@ -45,7 +45,8 @@ async fn main() {
         .open()
         .expect("Failed to open port");
 
-    let yhs_sign = AlphaSign::default();
+    let mut yhs_sign = AlphaSign::default();
+    yhs_sign.checksum = false;
 
     let (sign_command_tx, sign_command_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -134,6 +135,7 @@ async fn handle_command(
             let mut port_lock = port.lock().await;
             let write_text_command = sign.encode(vec![Command::WriteText(text)]);
             port_lock.write(write_text_command.as_slice()).ok(); // TODO handle errors
+            println!("{:X?}", write_text_command);
         }
     }
 }
