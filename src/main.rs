@@ -35,7 +35,7 @@ async fn main() {
     tracing::info!("🦊 Hello YHS! 🦊");
 
     let port: Box<dyn SignSerial> = if args.fake_serial {
-        Box::new(LoggerSerialPort::default())
+        Box::new(LoggerSerialPort)
     } else {
         let port = serialport::new("/dev/ttyUSB0", 9600)
             .timeout(Duration::from_millis(10))

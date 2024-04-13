@@ -5,7 +5,7 @@ use axum::{
     extract::{Path, State},
     http::{header, HeaderValue, StatusCode},
     response::{Html, IntoResponse},
-    routing::{get, post, put},
+    routing::{post, put},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -86,7 +86,7 @@ pub fn app(state: AppState) -> Router {
 /// # Returns
 /// A HTML string.
 async fn get_index() -> Html<String> {
-    Html(format!("YHS Sign Goes Here"))
+    Html("YHS Sign Goes Here".to_string())
 }
 
 /// Parameters for a PUT to `/text/:textKey`.
