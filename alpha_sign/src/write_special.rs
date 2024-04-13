@@ -24,6 +24,7 @@ impl WriteSpecial {
             }
             WriteSpecial::SetDayOfWeek(set_day_of_week) => set_day_of_week.encode(),
             WriteSpecial::SetTimeFormat(set_time_format) => set_time_format.encode(),
+            WriteSpecial::GenerateSpeakerTone(generate_speaker_tone) => generate_speaker_tone.encode(),
         };
         res.append(&mut inner);
         res

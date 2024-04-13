@@ -18,7 +18,7 @@ impl AlphaSign {
         let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
         for selector in &self.sign_selectors {
             res.push(selector.sign_type as u8);
-            res.push(selector.address);
+            res.append(&mut format!("{address:0>2X}",address = selector.address).into_bytes());
         }
         for command in commands {
             let mut command_section: Vec<u8> = vec![0x02]; //start of command
