@@ -1,6 +1,5 @@
-
-pub mod write_special;
 pub mod text;
+pub mod write_special;
 
 pub const BROADCAST: u8 = 0xFF;
 
@@ -11,8 +10,8 @@ pub struct AlphaSign {
 }
 
 impl AlphaSign {
-    pub fn encode(&self, commands: Vec<Command>) -> Vec<u8>{
-        let mut res: Vec<u8>= vec![0x00,0x00,0x00,0x00,0x00,0x01]; //start of transmission
+    pub fn encode(&self, commands: Vec<Command>) -> Vec<u8> {
+        let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
         res.push(self.sign_type as u8);
         res.push(self.address);
         for command in commands {
@@ -21,11 +20,8 @@ impl AlphaSign {
         }
         res.push(0x04); //end of transmission
         res
-        
     }
-
 }
-
 
 impl Default for AlphaSign {
     fn default() -> Self {
@@ -37,8 +33,6 @@ impl Default for AlphaSign {
     }
 }
 
-
-
 pub enum Command {
     WriteText(text::WriteText),
     ReadText(text::ReadText),
@@ -46,16 +40,14 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn encode(&self) -> Vec<u8>{
+    pub fn encode(&self) -> Vec<u8> {
         match self {
             Command::WriteText(write_text) => write_text.encode(),
             Command::ReadText(read_text) => read_text.encode(),
             Command::WriteSpecial(write_special) => write_special.encode(),
         }
-    } 
+    }
 }
-
-
 
 #[repr(u8)]
 #[derive(Copy, Clone)]

@@ -1,4 +1,3 @@
-
 #[derive(PartialEq, Eq, Clone, Copy)]
 #[repr(u8)]
 pub enum TextPosition {
@@ -135,13 +134,10 @@ pub struct ReadText {
 impl ReadText {
     const COMMANDCODE: u8 = 0x41;
     pub fn new(label: char) -> Self {
-        Self{
-            label
-        }
+        Self { label }
     }
 
     pub fn encode(&self) -> Vec<u8> {
         vec![Self::COMMANDCODE, self.label as u8]
     }
-
 }
