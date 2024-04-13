@@ -122,37 +122,3 @@ async fn put_text_handler(
         StatusCode::FORBIDDEN
     }
 }
-
-/*
-/// Body for a POST to `/script`.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PostScriptRequest {
-    pub language: SignScriptLanguage,
-    /// Script to execute.
-    pub script: String,
-}
-
-/// Handles a POST to `/script`.
-///
-/// # Arguments
-/// * `state`: Shared application state.
-/// * `body`: Request body.
-///
-/// # Returns
-/// A status code.
-#[axum::debug_handler]
-async fn post_script_handler(
-    state: State<AppState>,
-    Json(body): Json<PostScriptRequest>,
-) -> impl IntoResponse {
-    state
-        .command_tx
-        .send(SignCommand::RunScript {
-            script_language: SignScriptLanguage::Rhai,
-            script: body.script,
-        })
-        .ok(); // TODO: Handle errors
-
-    StatusCode::OK
-}
-*/

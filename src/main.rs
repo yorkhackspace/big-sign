@@ -116,54 +116,11 @@ async fn talk_to_sign(
     }
 }
 
-/*
-/// Makes a [`rhai::Engine`] that can be used to execute scripts written in the rhai language.
-/// Registers handlers and custom functions
-///
-/// # Arguments
-/// * `sign`: The sign to send commands to.
-///
-/// # Returns
-/// A [`rhai::Engine`] with handlers for print, debug, and custom functions for sign shenanigans.
-fn make_rhai_engine(sign: Arc<tokio::sync::Mutex<AlphaSign>>) -> rhai::Engine {
-    let mut engine = rhai::Engine::new();
-    engine.on_print(move |s| {
-        tracing::info!("From user-provided script: {s}");
-    });
-    engine.on_debug(move |s, src, pos| {
-        let src = src.unwrap_or("unknown");
-        tracing::debug!("From user-provided script: {src} at {pos:?}: {s}");
-    });
-    engine.register_fn("write", move |text: &str| {
-        let mut sign_lock = pollster::block_on(sign.lock());
-        let write_text_command = WriteText::new('A', text.to_string());
-        sign_lock.send_command(write_text_command);
-    });
-    engine.register_fn(
-        "delay_seconds",
-        move |seconds: i64| -> Result<(), Box<EvalAltResult>> {
-            if seconds < 0 {
-                return Err("Cannot wait for a negtive duration!".into());
-            }
-
-            if let Ok(seconds) = TryInto::<u64>::try_into(seconds) {
-                thread::sleep(Duration::from_secs(seconds));
-                Ok(())
-            } else {
-                Err("Invalid wait duration!".into())
-            }
-        },
-    );
-
-    engine
-}
-*/
-
 /// Handle a [`SignCommand`]
 ///
 /// # Arguments
 /// * `sign`: The sign to send commands to.
-/// * `rhai_engine`: Engine to use for executing Rhai scripts.
+/// * `port`: the serial port to send things down
 /// * `command`: The command to handle.
 async fn handle_command(
     sign: &AlphaSign,
