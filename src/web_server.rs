@@ -11,10 +11,10 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use tower::ServiceBuilder;
 use tower_http::{
+    services::ServeDir,
     timeout::TimeoutLayer,
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     LatencyUnit, ServiceBuilderExt,
-    services::ServeDir,
 };
 
 use crate::{SignCommand, SignScriptLanguage};
