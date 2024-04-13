@@ -1,31 +1,30 @@
+mod web_server;
+
+use crate::web_server::{app, AppState};
+use alpha_sign::AlphaSign;
+use alpha_sign::Command;
 use clap::Parser;
-use rhai::EvalAltResult;
+// use rhai::EvalAltResult;
 use serialport::SerialPort;
 use std::{
     net::{Ipv4Addr, SocketAddr},
-    sync::Arc,
-    thread,
+    //    thread,
     time::Duration,
 };
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
-use yhs_sign::{
-    commands::text::WriteText,
-    web_server::{app, AppState},
-    AlphaSign, SignCommand, SignSerial,
-};
 
 /// Service for communicating with the YHS sign.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Whether to print serial communication via the logger, rather than trying to talk to a serial port. Commands will be logged at the `trace` log level.
-    #[arg(long)]
-    fake_serial: bool,
     // serial port to use to connect to the sign
-    #[arg(long, default_value="/dev/ttyUSB0")]
+    #[arg(long, default_value = "/dev/ttyUSB0")]
     port: String,
+    // baud rate to use for the port
+    #[arg(long, default_value = "9600")]
+    baudrate: u32,
 }
 
 #[tokio::main]
@@ -37,29 +36,24 @@ async fn main() {
 
     tracing::info!("🦊 Hello YHS! 🦊");
 
-    let port: Box<dyn SignSerial> = if args.fake_serial {
-        Box::new(LoggerSerialPort)
-    } else {
-        let port = serialport::new(args.port.as_str(), 9600)
-            .timeout(Duration::from_millis(10))
-            .parity(serialport::Parity::None)
-            .data_bits(serialport::DataBits::Eight)
-            .stop_bits(serialport::StopBits::One)
-            .open()
-            .expect("Failed to open port");
-        Box::new(WrappedSerialPort(port))
-    };
+    let port: Box<dyn SerialPort> = serialport::new(args.port.as_str(), args.baudrate)
+        .timeout(Duration::from_millis(10))
+        .parity(serialport::Parity::None)
+        .data_bits(serialport::DataBits::Eight)
+        .stop_bits(serialport::StopBits::One)
+        .open()
+        .expect("Failed to open port");
 
-    let yhs_sign = AlphaSign::new(port, [0x30, 0x30], yhs_sign::TypeCode::AllSigns);
+    let yhs_sign = AlphaSign::default();
 
     let (sign_command_tx, sign_command_rx) = tokio::sync::mpsc::unbounded_channel();
 
     let cancel_sign = CancellationToken::new();
     let cancel_sign_task = cancel_sign.clone();
 
-    let app_state = AppState::new(sign_command_tx);
+    let app_state = web_server::AppState::new(sign_command_tx);
 
-    let message_loop = talk_to_sign(yhs_sign, sign_command_rx, cancel_sign_task);
+    let message_loop = talk_to_sign(yhs_sign, port, sign_command_rx, cancel_sign_task);
     let http_api = serve_api(app_state, 8080);
 
     select! {
@@ -68,27 +62,6 @@ async fn main() {
     }
 
     cancel_sign.cancel();
-}
-
-/// Wraps a [`Box<dyn SerialPort>`] so that it can be treated as a generic [`SignSerial`].
-struct WrappedSerialPort(Box<dyn SerialPort>);
-
-impl SignSerial for WrappedSerialPort {
-    fn write(&mut self, buf: &[u8]) -> Result<usize, std::io::Error> {
-        self.0.write(buf)
-    }
-}
-
-/// An implementer of [`SignSerial`] that logs to the console at the `trace` log level.
-#[derive(Default)]
-struct LoggerSerialPort;
-
-impl SignSerial for LoggerSerialPort {
-    fn write(&mut self, buf: &[u8]) -> Result<usize, std::io::Error> {
-        tracing::trace!("Serial data to sign: {:02X?}", buf);
-
-        Ok(buf.len())
-    }
 }
 
 /// Set up logging.
@@ -117,19 +90,19 @@ fn init_logging() {
 /// * `cancel`: [`CancellationToken`] that can be used to stop the task from running.
 async fn talk_to_sign(
     sign: AlphaSign,
-    mut message_rx: tokio::sync::mpsc::UnboundedReceiver<SignCommand>,
+    port: Box<dyn SerialPort>,
+    mut message_rx: tokio::sync::mpsc::UnboundedReceiver<Command>,
     cancel: CancellationToken,
 ) {
-    let sign = Arc::new(tokio::sync::Mutex::new(sign));
-    let rhai_engine = make_rhai_engine(sign.clone());
-
+    // let rhai_engine = make_rhai_engine(sign.clone());
+    let port_lock = tokio::sync::Mutex::new(port);
     while !cancel.is_cancelled() {
         select! {
             _ = cancel.cancelled() => {},
             message = message_rx.recv() => {
                 match message {
                     Some(command) => {
-                        handle_command(&sign, &rhai_engine, command).await;
+                        handle_command(&sign, &port_lock, command).await;
                     }
                     None => {
                         tracing::debug!(
@@ -143,6 +116,7 @@ async fn talk_to_sign(
     }
 }
 
+/*
 /// Makes a [`rhai::Engine`] that can be used to execute scripts written in the rhai language.
 /// Registers handlers and custom functions
 ///
@@ -183,6 +157,7 @@ fn make_rhai_engine(sign: Arc<tokio::sync::Mutex<AlphaSign>>) -> rhai::Engine {
 
     engine
 }
+*/
 
 /// Handle a [`SignCommand`]
 ///
@@ -191,26 +166,19 @@ fn make_rhai_engine(sign: Arc<tokio::sync::Mutex<AlphaSign>>) -> rhai::Engine {
 /// * `rhai_engine`: Engine to use for executing Rhai scripts.
 /// * `command`: The command to handle.
 async fn handle_command(
-    sign: &tokio::sync::Mutex<AlphaSign>,
-    rhai_engine: &rhai::Engine,
-    command: SignCommand,
+    sign: &AlphaSign,
+    port: &tokio::sync::Mutex<Box<dyn SerialPort>>,
+    // rhai_engine: &rhai::Engine,
+    command: Command,
 ) {
     match command {
-        SignCommand::WriteText { text } => {
-            let mut sign_lock = sign.lock().await;
-            let write_text_command = WriteText::new('A', text);
-            sign_lock.send_command(write_text_command);
+        Command::WriteText(text) => {
+            let mut port_lock = port.lock().await;
+            let write_text_command = sign.encode(vec![Command::WriteText(text)]);
+            port_lock.write(write_text_command.as_slice()).ok(); // TODO handle errors
         }
-        SignCommand::RunScript {
-            script_language,
-            script,
-        } => match script_language {
-            yhs_sign::SignScriptLanguage::Rhai => {
-                if let Err(err) = rhai_engine.run(&script) {
-                    tracing::error!("Error from user-provided script: {}", err);
-                }
-            }
-        },
+        Command::ReadText(_) => todo!(),
+        Command::WriteSpecial(_) => todo!(),
     }
 }
 

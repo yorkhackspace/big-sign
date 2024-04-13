@@ -1,11 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
+use alpha_sign::{text::WriteText, Command};
 use axum::{
     body::Bytes,
     extract::{Path, State},
     http::{header, HeaderValue, StatusCode},
-    response::{Html, IntoResponse},
-    routing::{post, put},
+    response::IntoResponse,
+    routing::put,
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -17,13 +18,11 @@ use tower_http::{
     LatencyUnit, ServiceBuilderExt,
 };
 
-use crate::{SignCommand, SignScriptLanguage};
-
 /// State shared between the main application and the HTTP application.
 #[derive(Clone)]
 pub struct AppState {
     /// Message channel into which commands can be sent.
-    command_tx: tokio::sync::mpsc::UnboundedSender<SignCommand>,
+    command_tx: tokio::sync::mpsc::UnboundedSender<Command>,
 }
 
 impl AppState {
@@ -34,7 +33,7 @@ impl AppState {
     ///
     /// # Returns
     /// A new [`AppState`].
-    pub fn new(command_tx: tokio::sync::mpsc::UnboundedSender<SignCommand>) -> Self {
+    pub fn new(command_tx: tokio::sync::mpsc::UnboundedSender<Command>) -> Self {
         Self { command_tx }
     }
 }
@@ -74,7 +73,7 @@ pub fn app(state: AppState) -> Router {
         );
 
     Router::new()
-        .route("/script", post(post_script_handler))
+        //.route("/script", post(post_script_handler))
         .route("/text/:textKey", put(put_text_handler))
         .layer(middleware)
         .with_state(state)
@@ -115,7 +114,7 @@ async fn put_text_handler(
     if ["test", "lulzbot", "anycubic"].contains(&text_key.as_str()) {
         state
             .command_tx
-            .send(SignCommand::WriteText { text: body.text })
+            .send(Command::WriteText(WriteText::new('A', body.text)))
             .ok(); // TODO: Handle errors
 
         StatusCode::OK
@@ -124,6 +123,7 @@ async fn put_text_handler(
     }
 }
 
+/*
 /// Body for a POST to `/script`.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostScriptRequest {
@@ -155,3 +155,4 @@ async fn post_script_handler(
 
     StatusCode::OK
 }
+*/
