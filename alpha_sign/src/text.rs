@@ -87,10 +87,10 @@ impl Into<Vec<u8>> for TransitionMode {
 }
 
 pub struct WriteText {
-    label: char,
-    message: String,
-    position: TextPosition,
-    mode: TransitionMode,
+    pub label: char,
+    pub message: String,
+    pub position: TextPosition,
+    pub mode: TransitionMode,
 }
 impl WriteText {
     pub const PRIORITY_LABEL: char = '0';
@@ -129,7 +129,7 @@ impl WriteText {
 }
 
 pub struct ReadText {
-    label: char,
+    pub label: char,
 }
 
 impl ReadText {

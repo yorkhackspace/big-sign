@@ -71,6 +71,7 @@ impl AlphaSign {
         res.push(0x04); //end of transmission
         Ok(res)
     }
+
 }
 
 impl Default for AlphaSign {

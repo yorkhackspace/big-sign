@@ -34,7 +34,7 @@ impl WriteSpecial {
 }
 
 pub struct SetTime {
-    time: Time,
+    pub time: Time,
 }
 
 impl SetTime {
@@ -55,7 +55,7 @@ impl SetTime {
 }
 
 pub struct ToggleSpeaker {
-    enabled: bool,
+    pub enabled: bool,
 }
 
 impl ToggleSpeaker {
@@ -94,6 +94,9 @@ impl StartStopTime {
             time: Time::from_hms(hour, tens * 10, 0)?,
         })
     }
+    pub fn time(&self) -> Time {
+        self.time
+    }
 }
 
 pub enum OnPeriod {
@@ -131,10 +134,10 @@ pub enum FileType {
 }
 
 pub struct MemoryConfiguration {
-    label: char,
-    file_type: FileType,
-    keyboard_accessible: bool,
-    size: u16,
+    pub label: char,
+    pub file_type: FileType,
+    pub keyboard_accessible: bool,
+    pub size: u16,
 }
 
 impl MemoryConfiguration {
@@ -212,7 +215,7 @@ impl ClearMemoryAndFlash {
 }
 
 pub struct SetDayOfWeek {
-    day: time::Weekday,
+    pub day: time::Weekday,
 }
 
 impl SetDayOfWeek {
@@ -239,7 +242,7 @@ impl SetDayOfWeek {
 }
 
 pub struct SetTimeFormat {
-    twenty_four_hour: bool,
+    pub twenty_four_hour: bool,
 }
 
 impl SetTimeFormat {
@@ -265,6 +268,7 @@ impl SetTimeFormat {
 pub enum ToneError {
     DurationOutOfRange,
     RepeatsOutOfRange,
+    FrequencyOutOfRange
 }
 
 pub struct ProgrammmableTone {
@@ -275,9 +279,11 @@ pub struct ProgrammmableTone {
 
 impl ProgrammmableTone {
     pub fn new(frequency: u8, duration: u8, repeats: u8) -> Result<Self, ToneError> {
-        if duration > 15 {
+        if frequency > 0xFE {
+            Err(ToneError::FrequencyOutOfRange)
+        }else if duration > 0xF {
             Err(ToneError::DurationOutOfRange)
-        } else if repeats > 15 {
+        } else if repeats > 0xF {
             Err(ToneError::RepeatsOutOfRange)
         } else {
             Ok(Self {
@@ -286,6 +292,18 @@ impl ProgrammmableTone {
                 repeats,
             })
         }
+    }
+
+    pub fn frequency(&self) -> u8 {
+        self.frequency
+    }
+
+    pub fn duration(&self) -> u8  {
+        self.duration
+    }
+
+    pub fn repeats(&self) -> u8 {
+        self.repeats
     }
 
     fn encode(&self) -> Vec<u8> {
@@ -316,7 +334,7 @@ pub enum ToneType {
 }
 
 pub struct GenerateSpeakerTone {
-    tone_type: ToneType,
+    pub tone_type: ToneType,
 }
 
 impl GenerateSpeakerTone {
@@ -336,8 +354,8 @@ impl GenerateSpeakerTone {
             ToneType::ProgrammmableTone { programmable_tone } => {
                 res.append(&mut programmable_tone.encode())
             }
-            ToneType::StoreProgrammableSound => res.push(0x33),
-            ToneType::TriggerProgrammableSound => res.push(0x34),
+            ToneType::StoreProgrammableSound => todo!(),
+            ToneType::TriggerProgrammableSound => todo!(),
         }
         res
     }
