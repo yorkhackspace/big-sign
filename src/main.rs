@@ -1,8 +1,9 @@
 mod web_server;
 
 use crate::web_server::{app, AppState};
-use alpha_sign::AlphaSign;
 use alpha_sign::Command;
+use alpha_sign::Packet;
+use alpha_sign::SignSelector;
 use clap::Parser;
 // use rhai::EvalAltResult;
 use serialport::SerialPort;
@@ -45,8 +46,8 @@ async fn main() {
         .open()
         .expect("Failed to open port");
 
-    let yhs_sign = AlphaSign::default();
-    // yhs_sign.checksum = false;
+    let yhs_selector = SignSelector::default();
+    // yhs_selector.checksum = false;
 
     let (sign_command_tx, sign_command_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -55,7 +56,7 @@ async fn main() {
 
     let app_state = web_server::AppState::new(sign_command_tx);
 
-    let message_loop = talk_to_sign(yhs_sign, port, sign_command_rx, cancel_sign_task);
+    let message_loop = talk_to_sign(yhs_selector, port, sign_command_rx, cancel_sign_task);
     let http_api = serve_api(app_state, 8080);
 
     select! {
@@ -91,7 +92,7 @@ fn init_logging() {
 /// * `message_rx`: Receiver for commands to be handled.
 /// * `cancel`: [`CancellationToken`] that can be used to stop the task from running.
 async fn talk_to_sign(
-    sign: AlphaSign,
+    sign: SignSelector,
     port: Box<dyn SerialPort>,
     mut message_rx: tokio::sync::mpsc::UnboundedReceiver<APICommand>,
     cancel: CancellationToken,
@@ -103,7 +104,7 @@ async fn talk_to_sign(
             message = message_rx.recv() => {
                 match message {
                     Some(command) => {
-                        handle_command(&sign, &port_lock, command).await;
+                        handle_command(sign, &port_lock, command).await;
                     }
                     None => {
                         tracing::debug!(
@@ -124,18 +125,19 @@ async fn talk_to_sign(
 /// * `port`: the serial port to send things down
 /// * `command`: The command to handle.
 async fn handle_command(
-    sign: &AlphaSign,
+    sign: SignSelector,
     port: &tokio::sync::Mutex<Box<dyn SerialPort>>,
-    // rhai_engine: &rhai::Engine,
     command: APICommand,
 ) {
     match command {
         APICommand::WriteText(text) => {
             let mut port_lock = port.lock().await;
-            let write_text_command = sign.encode(Command::WriteText(text)).unwrap();
+            let write_text_command = Packet::new(vec![sign], vec![Command::WriteText(text)])
+                .encode()
+                .unwrap();
 
             port_lock.write(write_text_command.as_slice()).ok(); // TODO handle errors
-            println!("{:X?}", write_text_command);
+            println!("{:0>2X?}", write_text_command);
         }
     }
 }
