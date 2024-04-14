@@ -99,6 +99,14 @@ impl Command {
             Command::WriteSpecial(write_special) => write_special.encode(),
         }
     }
+
+    pub fn is_read(&self) -> bool {
+        match self {
+            Command::WriteText(_) => false,
+            Command::ReadText(_) => true,
+            Command::WriteSpecial(_) => false,
+        }
+    }
 }
 
 #[repr(u8)]
