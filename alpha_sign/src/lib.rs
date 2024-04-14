@@ -1,6 +1,9 @@
 pub mod text;
 pub mod write_special;
 
+pub type ParseInput<'a> = &'a [u8];
+pub type ParseResult<'a, O> = nom::IResult<ParseInput<'a>, O, nom::error::VerboseError<ParseInput<'a>>>;
+
 pub const BROADCAST: u8 = 0x00;
 
 pub struct SignSelector {
@@ -8,83 +11,57 @@ pub struct SignSelector {
     pub address: u8,
 }
 
-pub struct AlphaSign {
-    pub sign_selectors: Vec<SignSelector>,
-    pub checksum: bool,
-}
-
 #[derive(Debug)]
 pub enum SignError {
     EncodingError(String),
 }
 
-impl AlphaSign {
-    pub fn encode_multiple(&self, commands: Vec<Command>) -> Result<Vec<u8>, SignError> {
-        if self.checksum {
-            let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
-            for selector in &self.sign_selectors {
-                res.push(selector.sign_type as u8);
-                res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
-            }
-            for command in &commands {
-                let mut command_section: Vec<u8> = vec![0x02]; //start of command
-                command_section.append(&mut command.encode());
-                command_section.push(0x03); //end of command
-                if self.checksum {
-                    let mut sum: u16 = 0;
-                    for byte in command_section.clone() {
-                        sum += byte as u16;
-                    }
-                    command_section.append(&mut format!("{sum:0>4X}").into_bytes())
-                }
-                res.append(&mut command_section);
-            }
-            if commands.len() == 1 {
-                res.pop(); // remove trailing 0x03 if it isn't needed (this breaks otherwise for some reason)
-            }
-            res.push(0x04); //end of transmission
-            Ok(res)
-        } else {
-            Err(SignError::EncodingError(
-                "Cannot encode multiple messages to one packet if checksums are disabled"
-                    .to_string(),
-            ))
+pub struct Packet {
+    pub selectors: Vec<SignSelector>,
+    pub commands: Vec<Command>
+
+}
+
+impl Packet {
+    pub fn new(selectors: Vec<SignSelector>, commands: Vec<Command>) -> Self {
+        //TODO maybe make this validate that read cant be not last
+        Self { 
+            selectors,
+            commands
         }
     }
-    pub fn encode(&self, command: Command) -> Result<Vec<u8>, SignError> {
+
+    pub fn encode_multiple(&self) -> Result<Vec<u8>, SignError> {
         let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
-        for selector in &self.sign_selectors {
+        for selector in &self.selectors{
             res.push(selector.sign_type as u8);
             res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
         }
-        let mut command_section: Vec<u8> = vec![0x02]; //start of command
-        command_section.append(&mut command.encode());
-        if self.checksum {
-            command_section.push(0x03);
+        for command in &self.commands {
+            let mut command_section: Vec<u8> = vec![0x02]; //start of command
+            command_section.append(&mut command.encode());
+            command_section.push(0x03); //end of command
             let mut sum: u16 = 0;
             for byte in command_section.clone() {
                 sum += byte as u16;
             }
-            command_section.append(&mut format!("{sum:0>4X}").into_bytes())
+            command_section.append(&mut format!("{sum:0>4X}").into_bytes());
+            res.append(&mut command_section);
         }
-        res.append(&mut command_section);
+        if self.commands.len() == 1 {
+            res.pop(); // remove trailing 0x03 if it isn't needed (this breaks otherwise for some reason)
+        }
         res.push(0x04); //end of transmission
         Ok(res)
     }
 
+    pub fn decode(packet: ParseInput ) -> Result<Self, SignError> {
+        todo!()
+    }
+
 }
 
-impl Default for AlphaSign {
-    fn default() -> Self {
-        AlphaSign {
-            sign_selectors: vec![SignSelector {
-                sign_type: SignType::All,
-                address: BROADCAST,
-            }],
-            checksum: true,
-        }
-    }
-}
+
 
 pub enum Command {
     WriteText(text::WriteText),
