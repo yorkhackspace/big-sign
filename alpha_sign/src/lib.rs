@@ -13,31 +13,63 @@ pub struct AlphaSign {
     pub checksum: bool,
 }
 
+#[derive(Debug)]
+pub enum SignError {
+    EncodingError(String),
+}
+
 impl AlphaSign {
-    pub fn encode(&self, commands: Vec<Command>) -> Vec<u8> {
+    pub fn encode_multiple(&self, commands: Vec<Command>) -> Result<Vec<u8>, SignError> {
+        if self.checksum {
+            let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
+            for selector in &self.sign_selectors {
+                res.push(selector.sign_type as u8);
+                res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
+            }
+            for command in &commands {
+                let mut command_section: Vec<u8> = vec![0x02]; //start of command
+                command_section.append(&mut command.encode());
+                command_section.push(0x03); //end of command
+                if self.checksum {
+                    let mut sum: u16 = 0;
+                    for byte in command_section.clone() {
+                        sum += byte as u16;
+                    }
+                    command_section.append(&mut format!("{sum:0>4X}").into_bytes())
+                }
+                res.append(&mut command_section);
+            }
+            if commands.len() == 1 {
+                res.pop(); // remove trailing 0x03 if it isn't needed (this breaks otherwise for some reason)
+            }
+            res.push(0x04); //end of transmission
+            Ok(res)
+        } else {
+            Err(SignError::EncodingError(
+                "Cannot encode multiple messages to one packet if checksums are disabled"
+                    .to_string(),
+            ))
+        }
+    }
+    pub fn encode(&self, command: Command) -> Result<Vec<u8>, SignError> {
         let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
         for selector in &self.sign_selectors {
             res.push(selector.sign_type as u8);
             res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
         }
-        for command in &commands {
-            let mut command_section: Vec<u8> = vec![0x02]; //start of command
-            command_section.append(&mut command.encode());
-            command_section.push(0x03); //end of command
-            if self.checksum {
-                let mut sum: u16 = 0;
-                for byte in command_section.clone() {
-                    sum += byte as u16;
-                }
-                command_section.append(&mut format!("{sum:0>4X}").into_bytes())
+        let mut command_section: Vec<u8> = vec![0x02]; //start of command
+        command_section.append(&mut command.encode());
+        if self.checksum {
+            command_section.push(0x03);
+            let mut sum: u16 = 0;
+            for byte in command_section.clone() {
+                sum += byte as u16;
             }
-            res.append(&mut command_section);
+            command_section.append(&mut format!("{sum:0>4X}").into_bytes())
         }
-        if (commands.len() == 1 && self.checksum == false) {
-            res.pop(); // remove trailing 0x03 if it isn't needed (this breaks otherwise for some reason)
-        }
+        res.append(&mut command_section);
         res.push(0x04); //end of transmission
-        res
+        Ok(res)
     }
 }
 
