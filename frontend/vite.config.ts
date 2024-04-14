@@ -7,5 +7,8 @@ export default defineConfig({
   build: {
     outDir: "../static",
     emptyOutDir: true
+  },
+  server: {
+    host: '127.0.0.1'
   }
 })
