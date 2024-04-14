@@ -9,6 +9,7 @@
   };
   nativeBuildInputs = with pkgs; [
     pkg-config
+    nodejs
   ];
   buildInputs = with pkgs; [
     libudev-zero

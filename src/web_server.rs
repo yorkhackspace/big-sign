@@ -1,29 +1,34 @@
 use std::{sync::Arc, time::Duration};
 
+use alpha_sign::text::WriteText;
 use axum::{
     body::Bytes,
     extract::{Path, State},
     http::{header, HeaderValue, StatusCode},
-    response::{Html, IntoResponse},
-    routing::{get, post, put},
+    response::IntoResponse,
+    routing::put,
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use tower::ServiceBuilder;
 use tower_http::{
+    services::ServeDir,
     timeout::TimeoutLayer,
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     LatencyUnit, ServiceBuilderExt,
-    services::ServeDir,
 };
-
-use crate::{SignCommand, SignScriptLanguage};
 
 /// State shared between the main application and the HTTP application.
 #[derive(Clone)]
 pub struct AppState {
     /// Message channel into which commands can be sent.
-    command_tx: tokio::sync::mpsc::UnboundedSender<SignCommand>,
+    command_tx: tokio::sync::mpsc::UnboundedSender<APICommand>,
+}
+
+/// Enumerates all messages that can be sent from the webserver to the main program.
+/// I don't just use sign commands here because the web server will likely be sending more abstract commands (like "set rotation texts") that are not included in the base sign protocol and handled instead in software.
+pub enum APICommand {
+    WriteText(WriteText),
 }
 
 impl AppState {
@@ -34,7 +39,7 @@ impl AppState {
     ///
     /// # Returns
     /// A new [`AppState`].
-    pub fn new(command_tx: tokio::sync::mpsc::UnboundedSender<SignCommand>) -> Self {
+    pub fn new(command_tx: tokio::sync::mpsc::UnboundedSender<APICommand>) -> Self {
         Self { command_tx }
     }
 }
@@ -74,7 +79,7 @@ pub fn app(state: AppState) -> Router {
         );
 
     Router::new()
-        .route("/script", post(post_script_handler))
+        //.route("/script", post(post_script_handler))
         .route("/text/:textKey", put(put_text_handler))
         .layer(middleware)
         .with_state(state)
@@ -115,43 +120,11 @@ async fn put_text_handler(
     if ["test", "lulzbot", "anycubic"].contains(&text_key.as_str()) {
         state
             .command_tx
-            .send(SignCommand::WriteText { text: body.text })
+            .send(APICommand::WriteText(WriteText::new('A', body.text)))
             .ok(); // TODO: Handle errors
 
         StatusCode::OK
     } else {
         StatusCode::FORBIDDEN
     }
-}
-
-/// Body for a POST to `/script`.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PostScriptRequest {
-    pub language: SignScriptLanguage,
-    /// Script to execute.
-    pub script: String,
-}
-
-/// Handles a POST to `/script`.
-///
-/// # Arguments
-/// * `state`: Shared application state.
-/// * `body`: Request body.
-///
-/// # Returns
-/// A status code.
-#[axum::debug_handler]
-async fn post_script_handler(
-    state: State<AppState>,
-    Json(body): Json<PostScriptRequest>,
-) -> impl IntoResponse {
-    state
-        .command_tx
-        .send(SignCommand::RunScript {
-            script_language: SignScriptLanguage::Rhai,
-            script: body.script,
-        })
-        .ok(); // TODO: Handle errors
-
-    StatusCode::OK
 }
