@@ -2,7 +2,8 @@ pub mod text;
 pub mod write_special;
 
 pub type ParseInput<'a> = &'a [u8];
-pub type ParseResult<'a, O> = nom::IResult<ParseInput<'a>, O, nom::error::VerboseError<ParseInput<'a>>>;
+pub type ParseResult<'a, O> =
+    nom::IResult<ParseInput<'a>, O, nom::error::VerboseError<ParseInput<'a>>>;
 
 pub const BROADCAST: u8 = 0x00;
 
@@ -18,22 +19,21 @@ pub enum SignError {
 
 pub struct Packet {
     pub selectors: Vec<SignSelector>,
-    pub commands: Vec<Command>
-
+    pub commands: Vec<Command>,
 }
 
 impl Packet {
     pub fn new(selectors: Vec<SignSelector>, commands: Vec<Command>) -> Self {
         //TODO maybe make this validate that read cant be not last
-        Self { 
+        Self {
             selectors,
-            commands
+            commands,
         }
     }
 
     pub fn encode_multiple(&self) -> Result<Vec<u8>, SignError> {
         let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
-        for selector in &self.selectors{
+        for selector in &self.selectors {
             res.push(selector.sign_type as u8);
             res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
         }
@@ -55,13 +55,10 @@ impl Packet {
         Ok(res)
     }
 
-    pub fn decode(packet: ParseInput ) -> Result<Self, SignError> {
+    pub fn decode(packet: ParseInput) -> Result<Self, SignError> {
         todo!()
     }
-
 }
-
-
 
 pub enum Command {
     WriteText(text::WriteText),
