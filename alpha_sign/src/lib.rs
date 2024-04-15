@@ -1,7 +1,12 @@
 use nom::{
-    character::complete::digit1,
-    combinator::{map, map_opt, map_res},
-    multi::many0,
+    branch::alt,
+    bytes::complete::take_while,
+    character::{
+        complete::{char, digit1},
+        is_hex_digit,
+    },
+    combinator::{map, map_opt, map_res, opt},
+    multi::{many0, many1, many_m_n},
     number::complete::u8,
     sequence::{pair, preceded, terminated, tuple},
 };
@@ -10,6 +15,11 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use std::str;
+
+use crate::{
+    text::{ReadText, WriteText},
+    write_special::WriteSpecial,
+};
 
 pub mod text;
 pub mod write_special;
@@ -40,13 +50,12 @@ impl SignSelector {
         SignSelector { sign_type, address }
     }
 
-    fn parse(input: &[u8]) -> ParseResult<Self> {
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
         let (remain, res) = pair(
             map_opt(u8, SignType::from_u8),
-            map_res(
-                terminated(digit1, nom::character::complete::char(0x02.into())),
-                |x| u8::from_str_radix(str::from_utf8(x).unwrap(), 16),
-            ),
+            map_res(take_while(is_hex_digit), |x| {
+                u8::from_str_radix(str::from_utf8(x).unwrap(), 16)
+            }),
         )(input)?;
 
         Ok((
@@ -84,7 +93,9 @@ impl Packet {
         for selector in &self.selectors {
             res.push(selector.sign_type as u8);
             res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
+            res.push(0x2c);
         }
+        res.pop(); // remove trailing comma
         for command in &self.commands {
             let mut command_section: Vec<u8> = vec![0x02]; //start of command
             command_section.append(&mut command.encode());
@@ -100,17 +111,28 @@ impl Packet {
         Ok(res)
     }
 
-    pub fn decode(packet: ParseInput) -> ParseResult<Self> {
-        let (remaining, result) = preceded(
-            pair(
-                many0(nom::character::complete::char(0x00.into())),
-                nom::character::complete::char(0x01.into()),
+    pub fn parse(packet: ParseInput) -> ParseResult<Self> {
+        let (remaining, result) = tuple((
+            preceded(
+                pair(
+                    many_m_n(5, 100, char(0x00.into())),         // starting nulls
+                    nom::character::complete::char(0x01.into()), // start of transmission
+                ),
+                many1(terminated(SignSelector::parse, opt(char(',')))), // selector, TODO support multiple selectors
             ),
-            SignSelector::parse,
-        )(packet)?;
+            terminated(
+                many0(Command::parse),
+                nom::character::complete::char(0x04.into()), // commands
+            ),
+        ))(packet)?;
 
-        println!("{:?}", result);
-        todo!()
+        Ok((
+            remaining,
+            Packet {
+                selectors: result.0,
+                commands: result.1,
+            },
+        ))
     }
 }
 
@@ -136,6 +158,10 @@ impl Command {
             Command::ReadText(_) => true,
             Command::WriteSpecial(_) => false,
         }
+    }
+    // TODO add other command types in an `alt`
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
+        Ok(map(WriteText::parse, |x| Command::WriteText(x))(input)?)
     }
 }
 

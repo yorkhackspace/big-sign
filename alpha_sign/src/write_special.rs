@@ -1,4 +1,8 @@
 use time::Time;
+
+use crate::ParseInput;
+use crate::ParseResult;
+
 #[derive(Debug)]
 pub enum WriteSpecial {
     SetTime(SetTime),
@@ -30,6 +34,10 @@ impl WriteSpecial {
         };
         res.append(&mut inner);
         res
+    }
+
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
     }
 }
 #[derive(Debug)]
