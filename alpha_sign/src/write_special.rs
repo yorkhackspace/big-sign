@@ -1,5 +1,5 @@
 use time::Time;
-
+#[derive(Debug)]
 pub enum WriteSpecial {
     SetTime(SetTime),
     ToggleSpeaker(ToggleSpeaker),
@@ -32,7 +32,7 @@ impl WriteSpecial {
         res
     }
 }
-
+#[derive(Debug)]
 pub struct SetTime {
     pub time: Time,
 }
@@ -53,7 +53,7 @@ impl SetTime {
         res
     }
 }
-
+#[derive(Debug)]
 pub struct ToggleSpeaker {
     pub enabled: bool,
 }
@@ -77,13 +77,13 @@ impl ToggleSpeaker {
         res
     }
 }
-
+#[derive(Debug)]
 pub enum ColorStatus {
     Monochrome,
     Tricolor,
     Octocolor,
 }
-
+#[derive(Debug)]
 pub struct StartStopTime {
     time: Time,
 }
@@ -98,7 +98,7 @@ impl StartStopTime {
         self.time
     }
 }
-
+#[derive(Debug)]
 pub enum OnPeriod {
     Always,
     Never,
@@ -126,13 +126,13 @@ impl OnPeriod {
         format!("{start:0<2X}{end:0<2X}", start = res[0], end = res[1]).into_bytes()
     }
 }
-
+#[derive(Debug)]
 pub enum FileType {
     Text { on_period: OnPeriod },
     String,
     Dots { color_status: ColorStatus },
 }
-
+#[derive(Debug)]
 pub struct MemoryConfiguration {
     pub label: char,
     pub file_type: FileType,
@@ -177,7 +177,7 @@ impl MemoryConfiguration {
         res
     }
 }
-
+#[derive(Debug)]
 pub struct ConfigureMemory {
     pub configurations: Vec<MemoryConfiguration>,
 }
@@ -199,7 +199,7 @@ impl ConfigureMemory {
         res
     }
 }
-
+#[derive(Debug)]
 pub struct ClearMemoryAndFlash {}
 
 impl ClearMemoryAndFlash {
@@ -213,7 +213,7 @@ impl ClearMemoryAndFlash {
         Self::SPECIAL_LABEL.into()
     }
 }
-
+#[derive(Debug)]
 pub struct SetDayOfWeek {
     pub day: time::Weekday,
 }
@@ -240,7 +240,7 @@ impl SetDayOfWeek {
         res
     }
 }
-
+#[derive(Debug)]
 pub struct SetTimeFormat {
     pub twenty_four_hour: bool,
 }
@@ -268,9 +268,9 @@ impl SetTimeFormat {
 pub enum ToneError {
     DurationOutOfRange,
     RepeatsOutOfRange,
-    FrequencyOutOfRange
+    FrequencyOutOfRange,
 }
-
+#[derive(Debug)]
 pub struct ProgrammmableTone {
     frequency: u8,
     duration: u8,
@@ -281,7 +281,7 @@ impl ProgrammmableTone {
     pub fn new(frequency: u8, duration: u8, repeats: u8) -> Result<Self, ToneError> {
         if frequency > 0xFE {
             Err(ToneError::FrequencyOutOfRange)
-        }else if duration > 0xF {
+        } else if duration > 0xF {
             Err(ToneError::DurationOutOfRange)
         } else if repeats > 0xF {
             Err(ToneError::RepeatsOutOfRange)
@@ -298,7 +298,7 @@ impl ProgrammmableTone {
         self.frequency
     }
 
-    pub fn duration(&self) -> u8  {
+    pub fn duration(&self) -> u8 {
         self.duration
     }
 
@@ -320,7 +320,7 @@ impl ProgrammmableTone {
         res
     }
 }
-
+#[derive(Debug)]
 pub enum ToneType {
     SpeakerOn,
     SpeakerOff,
@@ -332,7 +332,7 @@ pub enum ToneType {
     StoreProgrammableSound,
     TriggerProgrammableSound,
 }
-
+#[derive(Debug)]
 pub struct GenerateSpeakerTone {
     pub tone_type: ToneType,
 }

@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(u8)]
 pub enum TextPosition {
     MiddleLine = 0x20,
@@ -9,7 +9,7 @@ pub enum TextPosition {
     Right = 0x32,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum TransitionMode {
     Rotate,
     Hold,
@@ -86,6 +86,7 @@ impl Into<Vec<u8>> for TransitionMode {
     }
 }
 
+#[derive(Debug)]
 pub struct WriteText {
     pub label: char,
     pub message: String,
@@ -127,7 +128,7 @@ impl WriteText {
         res
     }
 }
-
+#[derive(Debug)]
 pub struct ReadText {
     pub label: char,
 }

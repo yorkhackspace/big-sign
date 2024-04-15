@@ -1,3 +1,16 @@
+use nom::{
+    character::complete::digit1,
+    combinator::{map, map_opt, map_res},
+    multi::many0,
+    number::complete::u8,
+    sequence::{pair, preceded, terminated, tuple},
+};
+
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+
+use std::str;
+
 pub mod text;
 pub mod write_special;
 
@@ -7,7 +20,7 @@ pub type ParseResult<'a, O> =
 
 pub const BROADCAST: u8 = 0x00;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct SignSelector {
     pub sign_type: SignType,
     pub address: u8,
@@ -22,11 +35,36 @@ impl Default for SignSelector {
     }
 }
 
+impl SignSelector {
+    pub fn new(sign_type: SignType, address: u8) -> Self {
+        SignSelector { sign_type, address }
+    }
+
+    fn parse(input: &[u8]) -> ParseResult<Self> {
+        let (remain, res) = pair(
+            map_opt(u8, SignType::from_u8),
+            map_res(
+                terminated(digit1, nom::character::complete::char(0x02.into())),
+                |x| u8::from_str_radix(str::from_utf8(x).unwrap(), 16),
+            ),
+        )(input)?;
+
+        Ok((
+            remain,
+            SignSelector {
+                sign_type: res.0,
+                address: res.1,
+            },
+        ))
+    }
+}
+
 #[derive(Debug)]
 pub enum SignError {
     EncodingError(String),
 }
 
+#[derive(Debug)]
 pub struct Packet {
     pub selectors: Vec<SignSelector>,
     pub commands: Vec<Command>,
@@ -62,11 +100,21 @@ impl Packet {
         Ok(res)
     }
 
-    pub fn decode(packet: ParseInput) -> Result<Self, SignError> {
+    pub fn decode(packet: ParseInput) -> ParseResult<Self> {
+        let (remaining, result) = preceded(
+            pair(
+                many0(nom::character::complete::char(0x00.into())),
+                nom::character::complete::char(0x01.into()),
+            ),
+            SignSelector::parse,
+        )(packet)?;
+
+        println!("{:?}", result);
         todo!()
     }
 }
 
+#[derive(Debug)]
 pub enum Command {
     WriteText(text::WriteText),
     ReadText(text::ReadText),
@@ -92,7 +140,7 @@ impl Command {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum SignType {
     SignWithVisualVerification = 0x21,
     SerialClock = 0x22,
