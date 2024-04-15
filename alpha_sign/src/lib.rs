@@ -110,7 +110,7 @@ impl Packet {
                     many_m_n(5, 100, char(0x00.into())),         // starting nulls
                     nom::character::complete::char(0x01.into()), // start of transmission
                 ),
-                many1(terminated(SignSelector::parse, opt(char(',')))), // selector, TODO support multiple selectors
+                many1(terminated(SignSelector::parse, opt(char(',')))),
             ),
             terminated(
                 many0(Command::parse),
@@ -151,7 +151,7 @@ impl Command {
             Command::WriteSpecial(_) => false,
         }
     }
-    // TODO add other command types in an `alt`
+
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
         Ok(alt((
             map(text::WriteText::parse, |x| Command::WriteText(x)),
@@ -169,6 +169,7 @@ pub enum SignType {
     FullMatrixAlphaVision = 0x24,
     CharacterMatrixAlphaVision = 0x25,
     LineMatrixAlphaVision = 0x26,
+    ResponsePacket = 0x30,
     OneLineSign = 0x31,
     TwoLineSign = 0x32,
     AllSigns = 0x3f,

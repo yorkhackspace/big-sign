@@ -11,7 +11,6 @@ use nom::multi::count;
 use nom::sequence::delimited;
 use nom::sequence::pair;
 use nom::sequence::preceded;
-use nom::sequence::terminated;
 use nom::sequence::tuple;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -188,7 +187,7 @@ impl WriteText {
     const COMMANDCODE: u8 = 0x41;
 
     pub fn new(label: char, message: String) -> Self {
-        //TODO check lable is valid
+        //TODO check label is valid
         //TODO make a message type
         Self {
             label,
@@ -230,7 +229,7 @@ impl WriteText {
                 )), // text position and transition mode
                 map_res(take_while(|x| x >= 0x20), str::from_utf8), // message body
             )),
-            opt(preceded(char(0x03.into()), count(hex_digit0, 4))),
+            opt(preceded(char(0x03.into()), count(hex_digit0, 4))), // checksum, parsed but discarded
         )(input)?;
 
         let mut w = WriteText::new(parse.0, parse.2.to_string());
@@ -262,7 +261,7 @@ impl ReadText {
         let (remain, parse) = delimited(
             tag([0x02, Self::COMMANDCODE]),
             anychar,                                                // label
-            opt(preceded(char(0x03.into()), count(hex_digit0, 4))), // optional checksum
+            opt(preceded(char(0x03.into()), count(hex_digit0, 4))), // optional checksum, discarded
         )(input)?;
 
         Ok((remain, ReadText::new(parse)))
