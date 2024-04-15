@@ -1,7 +1,7 @@
 use nom::{
+    branch::alt,
     bytes::complete::take_while,
-    character::complete::char,
-    character::is_hex_digit,
+    character::{complete::char, is_hex_digit},
     combinator::{map, map_opt, map_res, opt},
     multi::{many0, many1, many_m_n},
     number::complete::u8,
@@ -153,9 +153,10 @@ impl Command {
     }
     // TODO add other command types in an `alt`
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        Ok(map(text::WriteText::parse, |x| Command::WriteText(x))(
-            input,
-        )?)
+        Ok(alt((
+            map(text::WriteText::parse, |x| Command::WriteText(x)),
+            map(text::ReadText::parse, |x| Command::ReadText(x)),
+        ))(input)?)
     }
 }
 

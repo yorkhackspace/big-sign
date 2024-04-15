@@ -5,17 +5,30 @@ use alpha_sign::Packet;
 use alpha_sign::SignSelector;
 
 #[test]
-fn test_parse_writeText() {
+fn test_parse_write_text() {
     let pkt = Packet::new(
         vec![SignSelector::default()],
         vec![Command::WriteText(WriteText::new('A', "test".to_string()))],
     );
 
-    let Ok((leftover, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
         panic!()
     };
 
     assert_eq!(res, pkt)
+}
+
+#[test]
+fn test_parse_read_text() {
+    let pkt = Packet::new(
+        vec![SignSelector::default()],
+        vec![Command::ReadText(ReadText::new('A'))],
+    );
+
+    match Packet::parse(pkt.encode().unwrap().as_slice()) {
+        Ok((_, res)) => assert_eq!(pkt, res),
+        Err(e) => println!("{:#?}", e),
+    };
 }
 
 #[test]
@@ -31,7 +44,7 @@ fn test_parse_multiple_selectors() {
         vec![Command::WriteText(WriteText::new('A', "test".to_string()))],
     );
 
-    let Ok((leftover, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
         panic!()
     };
 
@@ -48,7 +61,7 @@ fn test_parse_multiple_commands() {
         ],
     );
 
-    let Ok((leftover, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
         panic!()
     };
 
@@ -71,7 +84,7 @@ fn test_parse_multiple_commands_and_selectors() {
         ],
     );
 
-    let Ok((leftover, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
         panic!()
     };
 

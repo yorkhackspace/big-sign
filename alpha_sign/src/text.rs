@@ -260,6 +260,14 @@ impl ReadText {
     }
 
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        todo!()
+        let (remain, parse) = preceded(
+            tag([0x02, Self::COMMANDCODE]),
+            terminated(
+                anychar,                                                // label
+                opt(preceded(char(0x03.into()), count(hex_digit0, 4))), // optional checksum
+            ),
+        )(input)?;
+
+        Ok((remain, ReadText::new(parse)))
     }
 }
