@@ -1,16 +1,13 @@
-use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::bytes::complete::take_while;
 use nom::character::complete::anychar;
 use nom::character::complete::char;
 use nom::character::complete::hex_digit0;
 use nom::character::complete::one_of;
-use nom::combinator::map;
 use nom::combinator::map_opt;
 use nom::combinator::map_res;
 use nom::combinator::opt;
 use nom::multi::count;
-use nom::multi::many_m_n;
 use nom::sequence::pair;
 use nom::sequence::preceded;
 use nom::sequence::terminated;

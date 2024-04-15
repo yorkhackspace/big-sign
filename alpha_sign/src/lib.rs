@@ -1,10 +1,7 @@
 use nom::{
-    branch::alt,
     bytes::complete::take_while,
-    character::{
-        complete::{char, digit1},
-        is_hex_digit,
-    },
+    character::complete::char,
+    character::is_hex_digit,
     combinator::{map, map_opt, map_res, opt},
     multi::{many0, many1, many_m_n},
     number::complete::u8,
@@ -15,11 +12,6 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use std::str;
-
-use crate::{
-    text::{ReadText, WriteText},
-    write_special::WriteSpecial,
-};
 
 pub mod text;
 pub mod write_special;
@@ -161,7 +153,9 @@ impl Command {
     }
     // TODO add other command types in an `alt`
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        Ok(map(WriteText::parse, |x| Command::WriteText(x))(input)?)
+        Ok(map(text::WriteText::parse, |x| Command::WriteText(x))(
+            input,
+        )?)
     }
 }
 
@@ -216,6 +210,3 @@ pub enum SignType {
     TemperatureProbe = 0x79,
     AllSignsWithMemoryConfiguredFor26Files = 0x7a,
 }
-
-#[cfg(test)]
-mod tests {}
