@@ -175,7 +175,7 @@ impl TransitionMode {
 }
 
 // parses any number of ASCII printable characters
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct WriteText {
     pub label: char,
     pub message: String,
@@ -244,7 +244,7 @@ impl WriteText {
         Ok((remain, w))
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ReadText {
     pub label: char,
 }

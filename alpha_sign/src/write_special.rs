@@ -3,7 +3,7 @@ use time::Time;
 use crate::ParseInput;
 use crate::ParseResult;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum WriteSpecial {
     SetTime(SetTime),
     ToggleSpeaker(ToggleSpeaker),
@@ -40,7 +40,7 @@ impl WriteSpecial {
         todo!()
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetTime {
     pub time: Time,
 }
@@ -61,7 +61,7 @@ impl SetTime {
         res
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ToggleSpeaker {
     pub enabled: bool,
 }
@@ -85,13 +85,13 @@ impl ToggleSpeaker {
         res
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ColorStatus {
     Monochrome,
     Tricolor,
     Octocolor,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct StartStopTime {
     time: Time,
 }
@@ -106,7 +106,7 @@ impl StartStopTime {
         self.time
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum OnPeriod {
     Always,
     Never,
@@ -134,13 +134,13 @@ impl OnPeriod {
         format!("{start:0<2X}{end:0<2X}", start = res[0], end = res[1]).into_bytes()
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum FileType {
     Text { on_period: OnPeriod },
     String,
     Dots { color_status: ColorStatus },
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MemoryConfiguration {
     pub label: char,
     pub file_type: FileType,
@@ -185,7 +185,7 @@ impl MemoryConfiguration {
         res
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ConfigureMemory {
     pub configurations: Vec<MemoryConfiguration>,
 }
@@ -207,7 +207,7 @@ impl ConfigureMemory {
         res
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ClearMemoryAndFlash {}
 
 impl ClearMemoryAndFlash {
@@ -221,7 +221,7 @@ impl ClearMemoryAndFlash {
         Self::SPECIAL_LABEL.into()
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetDayOfWeek {
     pub day: time::Weekday,
 }
@@ -248,7 +248,7 @@ impl SetDayOfWeek {
         res
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetTimeFormat {
     pub twenty_four_hour: bool,
 }
@@ -272,13 +272,13 @@ impl SetTimeFormat {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ToneError {
     DurationOutOfRange,
     RepeatsOutOfRange,
     FrequencyOutOfRange,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ProgrammmableTone {
     frequency: u8,
     duration: u8,
@@ -328,7 +328,7 @@ impl ProgrammmableTone {
         res
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ToneType {
     SpeakerOn,
     SpeakerOff,
@@ -340,7 +340,7 @@ pub enum ToneType {
     StoreProgrammableSound,
     TriggerProgrammableSound,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct GenerateSpeakerTone {
     pub tone_type: ToneType,
 }

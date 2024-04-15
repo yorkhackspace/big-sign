@@ -22,7 +22,7 @@ pub type ParseResult<'a, O> =
 
 pub const BROADCAST: u8 = 0x00;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SignSelector {
     pub sign_type: SignType,
     pub address: u8,
@@ -65,7 +65,7 @@ pub enum SignError {
     EncodingError(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Packet {
     pub selectors: Vec<SignSelector>,
     pub commands: Vec<Command>,
@@ -128,7 +128,7 @@ impl Packet {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     WriteText(text::WriteText),
     ReadText(text::ReadText),
@@ -160,7 +160,7 @@ impl Command {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, FromPrimitive)]
+#[derive(Copy, Clone, Debug, FromPrimitive, PartialEq, Eq)]
 pub enum SignType {
     SignWithVisualVerification = 0x21,
     SerialClock = 0x22,
