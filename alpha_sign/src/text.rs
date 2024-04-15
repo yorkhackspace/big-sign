@@ -8,6 +8,7 @@ use nom::combinator::map_opt;
 use nom::combinator::map_res;
 use nom::combinator::opt;
 use nom::multi::count;
+use nom::sequence::delimited;
 use nom::sequence::pair;
 use nom::sequence::preceded;
 use nom::sequence::terminated;
@@ -219,19 +220,17 @@ impl WriteText {
     }
 
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        let (remain, parse) = preceded(
+        let (remain, parse) = delimited(
             tag([0x02, Self::COMMANDCODE]), // command code
-            terminated(
-                tuple((
-                    anychar, // label, TODO label parser
-                    opt(preceded(
-                        char(0x1b.into()),
-                        pair(TextPosition::parse, TransitionMode::parse),
-                    )), // text position and transition mode
-                    map_res(take_while(|x| x >= 0x20), str::from_utf8), // message body
-                )),
-                opt(preceded(char(0x03.into()), count(hex_digit0, 4))), // checksum
-            ), // optional checksum
+            tuple((
+                anychar, // label, TODO label parser
+                opt(preceded(
+                    char(0x1b.into()),
+                    pair(TextPosition::parse, TransitionMode::parse),
+                )), // text position and transition mode
+                map_res(take_while(|x| x >= 0x20), str::from_utf8), // message body
+            )),
+            opt(preceded(char(0x03.into()), count(hex_digit0, 4))),
         )(input)?;
 
         let mut w = WriteText::new(parse.0, parse.2.to_string());
@@ -260,12 +259,10 @@ impl ReadText {
     }
 
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        let (remain, parse) = preceded(
+        let (remain, parse) = delimited(
             tag([0x02, Self::COMMANDCODE]),
-            terminated(
-                anychar,                                                // label
-                opt(preceded(char(0x03.into()), count(hex_digit0, 4))), // optional checksum
-            ),
+            anychar,                                                // label
+            opt(preceded(char(0x03.into()), count(hex_digit0, 4))), // optional checksum
         )(input)?;
 
         Ok((remain, ReadText::new(parse)))
