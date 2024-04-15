@@ -158,6 +158,13 @@ impl From<Vec<u8>> for TransitionMode {
     }
 }
 
+impl TextPosition {
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
+        map_opt(one_of([0x20, 0x22, 0x26, 0x30, 0x31, 0x32]), |x| {
+            TextPosition::from_u8(x as u8)
+        })(input)
+    }
+}
 impl TransitionMode {
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
         let (remain, parse) = pair(anychar, opt(anychar))(input)?;
@@ -216,18 +223,13 @@ impl WriteText {
 
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
         let (remain, parse) = preceded(
-            tag([0x02, Self::COMMANDCODE]), // command codea
+            tag([0x02, Self::COMMANDCODE]), // command code
             terminated(
                 tuple((
                     anychar, // label, TODO label parser
                     opt(preceded(
                         char(0x1b.into()),
-                        pair(
-                            map_opt(one_of([0x20, 0x22, 0x26, 0x30, 0x31, 0x32]), |x| {
-                                TextPosition::from_u8(x as u8)
-                            }),
-                            TransitionMode::parse,
-                        ),
+                        pair(TextPosition::parse, TransitionMode::parse),
                     )), // text position and transition mode
                     map_res(take_while(|x| x >= 0x20), str::from_utf8), // message body
                 )),
