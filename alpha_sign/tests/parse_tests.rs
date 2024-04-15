@@ -69,6 +69,23 @@ fn test_parse_multiple_commands() {
 }
 
 #[test]
+fn test_parse_multiple_different_commands() {
+    let pkt = Packet::new(
+        vec![SignSelector::default()],
+        vec![
+            Command::WriteText(WriteText::new('A', "test".to_string())),
+            Command::ReadText(ReadText::new('D')),
+        ],
+    );
+
+    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+        panic!()
+    };
+
+    assert_eq!(res, pkt)
+}
+
+#[test]
 fn test_parse_multiple_commands_and_selectors() {
     let pkt = Packet::new(
         vec![
