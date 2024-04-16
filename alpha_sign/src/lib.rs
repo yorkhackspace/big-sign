@@ -1,3 +1,18 @@
+use nom::{
+    branch::alt,
+    bytes::complete::take_while,
+    character::{complete::char, is_hex_digit},
+    combinator::{map, map_opt, map_res, opt},
+    multi::{many0, many1, many_m_n},
+    number::complete::u8,
+    sequence::{pair, preceded, terminated, tuple},
+};
+
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+
+use std::str;
+
 pub mod text;
 pub mod write_special;
 
@@ -7,7 +22,7 @@ pub type ParseResult<'a, O> =
 
 pub const BROADCAST: u8 = 0x00;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SignSelector {
     pub sign_type: SignType,
     pub address: u8,
@@ -22,11 +37,35 @@ impl Default for SignSelector {
     }
 }
 
+impl SignSelector {
+    pub fn new(sign_type: SignType, address: u8) -> Self {
+        SignSelector { sign_type, address }
+    }
+
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
+        let (remain, res) = pair(
+            map_opt(u8, SignType::from_u8),
+            map_res(take_while(is_hex_digit), |x| {
+                u8::from_str_radix(str::from_utf8(x).unwrap(), 16)
+            }),
+        )(input)?;
+
+        Ok((
+            remain,
+            SignSelector {
+                sign_type: res.0,
+                address: res.1,
+            },
+        ))
+    }
+}
+
 #[derive(Debug)]
 pub enum SignError {
     EncodingError(String),
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct Packet {
     pub selectors: Vec<SignSelector>,
     pub commands: Vec<Command>,
@@ -46,7 +85,9 @@ impl Packet {
         for selector in &self.selectors {
             res.push(selector.sign_type as u8);
             res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
+            res.push(0x2c);
         }
+        res.pop(); // remove trailing comma
         for command in &self.commands {
             let mut command_section: Vec<u8> = vec![0x02]; //start of command
             command_section.append(&mut command.encode());
@@ -62,11 +103,32 @@ impl Packet {
         Ok(res)
     }
 
-    pub fn decode(packet: ParseInput) -> Result<Self, SignError> {
-        todo!()
+    pub fn parse(packet: ParseInput) -> ParseResult<Self> {
+        let (remaining, result) = tuple((
+            preceded(
+                pair(
+                    many_m_n(5, 100, char(0x00.into())),         // starting nulls
+                    nom::character::complete::char(0x01.into()), // start of transmission
+                ),
+                many1(terminated(SignSelector::parse, opt(char(',')))),
+            ),
+            terminated(
+                many0(Command::parse),
+                nom::character::complete::char(0x04.into()), // commands
+            ),
+        ))(packet)?;
+
+        Ok((
+            remaining,
+            Packet {
+                selectors: result.0,
+                commands: result.1,
+            },
+        ))
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     WriteText(text::WriteText),
     ReadText(text::ReadText),
@@ -89,10 +151,20 @@ impl Command {
             Command::WriteSpecial(_) => false,
         }
     }
+
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
+        Ok(alt((
+            map(text::WriteText::parse, |x| Command::WriteText(x)),
+            map(text::ReadText::parse, |x| Command::ReadText(x)),
+            map(write_special::WriteSpecial::parse, |x| {
+                Command::WriteSpecial(x)
+            }),
+        ))(input)?)
+    }
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, FromPrimitive, PartialEq, Eq)]
 pub enum SignType {
     SignWithVisualVerification = 0x21,
     SerialClock = 0x22,
@@ -100,6 +172,7 @@ pub enum SignType {
     FullMatrixAlphaVision = 0x24,
     CharacterMatrixAlphaVision = 0x25,
     LineMatrixAlphaVision = 0x26,
+    ResponsePacket = 0x30,
     OneLineSign = 0x31,
     TwoLineSign = 0x32,
     AllSigns = 0x3f,
@@ -142,6 +215,3 @@ pub enum SignType {
     TemperatureProbe = 0x79,
     AllSignsWithMemoryConfiguredFor26Files = 0x7a,
 }
-
-#[cfg(test)]
-mod tests {}

@@ -1,15 +1,19 @@
 use std::{sync::Arc, time::Duration};
 
-use alpha_sign::text::WriteText;
+use alpha_sign::{
+    text::{ReadText, WriteText},
+    Packet,
+};
 use axum::{
     body::Bytes,
     extract::{Path, State},
     http::{header, HeaderValue, StatusCode},
     response::IntoResponse,
-    routing::put,
+    routing::{get, put},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use tokio::sync::oneshot::{self, Sender};
 use tower::ServiceBuilder;
 use tower_http::{
     services::ServeDir,
@@ -25,10 +29,16 @@ pub struct AppState {
     command_tx: tokio::sync::mpsc::UnboundedSender<APICommand>,
 }
 
+/// all possible responses to an API command.
+pub enum APIResponse {
+    ReadText(String),
+}
+
 /// Enumerates all messages that can be sent from the webserver to the main program.
 /// I don't just use sign commands here because the web server will likely be sending more abstract commands (like "set rotation texts") that are not included in the base sign protocol and handled instead in software.
 pub enum APICommand {
     WriteText(WriteText),
+    ReadText(ReadText, Sender<APIResponse>),
 }
 
 impl AppState {
@@ -81,6 +91,7 @@ pub fn app(state: AppState) -> Router {
     Router::new()
         //.route("/script", post(post_script_handler))
         .route("/text/:textKey", put(put_text_handler))
+        .route("/text/get/:label", get(get_text_handler))
         .layer(middleware)
         .with_state(state)
         .fallback_service(ServeDir::new("static"))
@@ -109,7 +120,7 @@ pub struct PutTextRequest {
 /// * `body`: Request body.
 ///
 /// # Returns
-/// A status code.
+/// JSON with that text returned from the sign
 #[axum::debug_handler]
 async fn put_text_handler(
     state: State<AppState>,
@@ -126,5 +137,34 @@ async fn put_text_handler(
         StatusCode::OK
     } else {
         StatusCode::FORBIDDEN
+    }
+}
+
+#[derive(Serialize)]
+struct GetTextResponse {
+    text: String,
+}
+
+/// Parameters for a GET to `/text/get`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetTextParams {
+    /// The key to PUT text to.
+    pub label: char,
+}
+
+#[axum::debug_handler]
+async fn get_text_handler(
+    state: State<AppState>,
+    Path(GetTextParams { label }): Path<GetTextParams>,
+) -> impl IntoResponse {
+    let (tx, rx) = oneshot::channel::<APIResponse>();
+    state
+        .command_tx
+        .send(APICommand::ReadText(ReadText::new(label), tx))
+        .ok(); // TODO handle errors
+
+    match rx.await {
+        Ok(APIResponse::ReadText(t)) => Json(GetTextResponse { text: t }).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }

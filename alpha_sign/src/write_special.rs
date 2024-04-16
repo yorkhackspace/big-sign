@@ -1,5 +1,22 @@
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::char;
+use nom::character::complete::hex_digit0;
+use nom::character::complete::one_of;
+use nom::combinator::map;
+use nom::combinator::map_res;
+use nom::combinator::opt;
+use nom::combinator::value;
+use nom::multi::count;
+use nom::sequence::delimited;
+use nom::sequence::pair;
+use nom::sequence::preceded;
 use time::Time;
 
+use crate::ParseInput;
+use crate::ParseResult;
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum WriteSpecial {
     SetTime(SetTime),
     ToggleSpeaker(ToggleSpeaker),
@@ -49,8 +66,38 @@ impl WriteSpecial {
         res.append(&mut inner);
         res
     }
-}
 
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
+        Ok(delimited(
+            tag([0x02, Self::COMMANDCODE]),
+            alt((
+                map(SetTime::parse, |x| WriteSpecial::SetTime(x)),
+                map(ToggleSpeaker::parse, |x| WriteSpecial::ToggleSpeaker(x)),
+                map(ConfigureMemory::parse, |x| WriteSpecial::ConfigureMemory(x)),
+                map(ClearMemoryAndFlash::parse, |x| {
+                    WriteSpecial::ClearMemoryAndFlash(x)
+                }),
+                map(SetDayOfWeek::parse, |x| WriteSpecial::SetDayOfWeek(x)),
+                map(SetTimeFormat::parse, |x| WriteSpecial::SetTimeFormat(x)),
+                map(GenerateSpeakerTone::parse, |x| {
+                    WriteSpecial::GenerateSpeakerTone(x)
+                }),
+                map(SetRunTimeTable::parse, |x| WriteSpecial::SetRunTimeTable(x)),
+                // TODO displayatXY position
+                map(SoftReset::parse, |x| WriteSpecial::SoftReset(x)),
+                map(SetRunSequence::parse, |x| WriteSpecial::SetRunSequence(x)),
+                // TODO setDimmingRegister
+                // TODO set dimming times
+                map(SetRunDayTable::parse, |x| WriteSpecial::SetRunDayTable(x)),
+                map(ClearSerialErrorStatusRegister::parse, |x| {
+                    WriteSpecial::ClearSerialErrorStatusRegister(x)
+                }),
+            )),
+            opt(preceded(char(0x03.into()), count(hex_digit0, 4))),
+        )(input)?)
+    }
+}
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetTime {
     pub time: Time,
 }
@@ -70,8 +117,27 @@ impl SetTime {
         res.append(&mut time);
         res
     }
-}
 
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        let (remain, parse) = preceded(
+            char(0x20.into()),
+            pair(
+                map_res(count(one_of("0123456789"), 2), |x| {
+                    x.iter().collect::<String>().parse::<u8>()
+                }),
+                map_res(count(one_of("0123456789"), 2), |x| {
+                    x.iter().collect::<String>().parse::<u8>()
+                }),
+            ),
+        )(input)?;
+
+        Ok((
+            remain,
+            SetTime::new(Time::from_hms(parse.0, parse.1, 0).unwrap()),
+        ))
+    }
+}
+#[derive(Debug, PartialEq, Eq)]
 pub struct ToggleSpeaker {
     pub enabled: bool,
 }
@@ -94,14 +160,25 @@ impl ToggleSpeaker {
         }
         res
     }
-}
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        let (remain, parse) = preceded(
+            char(0x21.into()),
+            alt((
+                value(true, tag([0x30, 0x30])),
+                value(false, tag([0x46, 0x46])),
+            )),
+        )(input)?;
 
+        Ok((remain, ToggleSpeaker::new(parse)))
+    }
+}
+#[derive(Debug, PartialEq, Eq)]
 pub enum ColorStatus {
     Monochrome,
     Tricolor,
     Octocolor,
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct StartStopTime {
     time: Time,
 }
@@ -115,8 +192,11 @@ impl StartStopTime {
     pub fn time(&self) -> Time {
         self.time
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub enum OnPeriod {
     Always,
     Never,
@@ -143,8 +223,11 @@ impl OnPeriod {
         };
         format!("{start:0<2X}{end:0<2X}", start = res[0], end = res[1]).into_bytes()
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub enum FileType {
     Text {
         size: u16,
@@ -159,7 +242,7 @@ pub enum FileType {
         color_status: ColorStatus,
     },
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct MemoryConfiguration {
     pub label: char,
     pub file_type: FileType,
@@ -207,10 +290,14 @@ impl MemoryConfiguration {
         res.append(&mut file_config);
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
 
 pub struct SignOutOfMemory {}
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct ConfigureMemory {
     //TODO check only the last file can have a size of 0
     configurations: Vec<MemoryConfiguration>,
@@ -241,8 +328,11 @@ impl ConfigureMemory {
         }
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct ClearMemoryAndFlash {}
 
 impl ClearMemoryAndFlash {
@@ -255,8 +345,11 @@ impl ClearMemoryAndFlash {
     fn encode(&self) -> Vec<u8> {
         Self::SPECIAL_LABEL.into()
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetDayOfWeek {
     pub day: time::Weekday,
 }
@@ -282,8 +375,11 @@ impl SetDayOfWeek {
         res.push(day);
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetTimeFormat {
     pub twenty_four_hour: bool,
 }
@@ -305,15 +401,18 @@ impl SetTimeFormat {
 
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ToneError {
     DurationOutOfRange,
     RepeatsOutOfRange,
     FrequencyOutOfRange,
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct ProgrammmableTone {
     frequency: u8,
     duration: u8,
@@ -362,8 +461,11 @@ impl ProgrammmableTone {
         );
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub enum ToneType {
     SpeakerOn,
     SpeakerOff,
@@ -375,7 +477,7 @@ pub enum ToneType {
     StoreProgrammableSound,
     TriggerProgrammableSound,
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct GenerateSpeakerTone {
     pub tone_type: ToneType,
 }
@@ -402,8 +504,12 @@ impl GenerateSpeakerTone {
         }
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct RunTimeTable {
     label: char,
     on_period: OnPeriod,
@@ -419,8 +525,12 @@ impl RunTimeTable {
         res.append(&mut self.on_period.encode());
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetRunTimeTable {
     pub run_time_tables: Vec<RunTimeTable>,
 }
@@ -439,8 +549,12 @@ impl SetRunTimeTable {
         }
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct SoftReset {}
 
 impl SoftReset {
@@ -454,15 +568,20 @@ impl SoftReset {
         let res: Vec<u8> = Self::SPECIAL_LABEL.into();
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
 pub struct TooManyTextFiles {}
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum RunSequenceType {
     FollowFileTimes,
     IgnoreFileTimes,
     DeleteAtOffTime,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetRunSequence {
     pub run_seqeunce_type: RunSequenceType,
 
@@ -500,8 +619,11 @@ impl SetRunSequence {
         }
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub enum RunDays {
     Daily,
     WeekDays,
@@ -548,8 +670,11 @@ impl RunDays {
             }
         }
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetRunDayTable {
     pub label: char,
     pub run_days: RunDays,
@@ -568,8 +693,11 @@ impl SetRunDayTable {
         res.append(&mut self.run_days.encode());
         res
     }
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
+    }
 }
-
+#[derive(Debug, PartialEq, Eq)]
 pub struct ClearSerialErrorStatusRegister {
     //TODO confirm whether this is correct, the
     //documentation sucks
@@ -585,5 +713,9 @@ impl ClearSerialErrorStatusRegister {
     fn encode(&self) -> Vec<u8> {
         let res: Vec<u8> = Self::SPECIAL_LABEL.into();
         res
+    }
+
+    fn parse(input: ParseInput) -> ParseResult<Self> {
+        todo!()
     }
 }
