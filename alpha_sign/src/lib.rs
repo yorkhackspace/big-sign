@@ -156,6 +156,9 @@ impl Command {
         Ok(alt((
             map(text::WriteText::parse, |x| Command::WriteText(x)),
             map(text::ReadText::parse, |x| Command::ReadText(x)),
+            map(write_special::WriteSpecial::parse, |x| {
+                Command::WriteSpecial(x)
+            }),
         ))(input)?)
     }
 }

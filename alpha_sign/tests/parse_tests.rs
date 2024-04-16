@@ -1,8 +1,12 @@
 use alpha_sign::text::ReadText;
 use alpha_sign::text::WriteText;
+use alpha_sign::write_special::SetTime;
+use alpha_sign::write_special::WriteSpecial;
 use alpha_sign::Command;
 use alpha_sign::Packet;
 use alpha_sign::SignSelector;
+use time;
+use time::Time;
 
 #[test]
 fn test_parse_write_text() {
@@ -29,6 +33,22 @@ fn test_parse_read_text() {
         Ok((_, res)) => assert_eq!(pkt, res),
         Err(e) => println!("{:#?}", e),
     };
+}
+
+#[test]
+fn test_parse_set_time() {
+    let pkt = Packet::new(
+        vec![SignSelector::default()],
+        vec![Command::WriteSpecial(WriteSpecial::SetTime(SetTime::new(
+            Time::from_hms(12, 30, 0).unwrap(),
+        )))],
+    );
+
+    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+        panic!()
+    };
+
+    assert_eq!(res, pkt)
 }
 
 #[test]
