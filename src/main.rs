@@ -2,6 +2,9 @@ mod web_server;
 
 use crate::web_server::{app, AppState};
 use alpha_sign::text::WriteText;
+use alpha_sign::write_special::SetTime;
+use alpha_sign::write_special::SoftReset;
+use alpha_sign::write_special::WriteSpecial;
 use alpha_sign::Command;
 use alpha_sign::Packet;
 use alpha_sign::SignSelector;
@@ -15,6 +18,8 @@ use std::{
     //    thread,
     time::Duration,
 };
+use time::OffsetDateTime;
+use time::UtcOffset;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -51,6 +56,20 @@ async fn main() {
 
     let yhs_selector = SignSelector::default();
     // yhs_selector.checksum = false;
+    
+    // TODO this is not friendly to clocks changing!
+    let now = OffsetDateTime::now_utc().to_offset(UtcOffset::from_hms(1, 0, 0).unwrap());
+
+    // sync time with sign on startup
+    let set_time_command = Command::WriteSpecial(WriteSpecial::SetTime(SetTime::new(now.time())));
+
+    port.write(
+        Packet::new(vec![yhs_selector], vec![set_time_command])
+            .encode()
+            .expect("could not create time sync packet")
+            .as_slice(),
+    )
+    .expect("Could not write date/time sync to sign");
 
     let (sign_command_tx, sign_command_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -134,6 +153,18 @@ async fn handle_command(sign: SignSelector, port: &mut Box<dyn SerialPort>, comm
                 .unwrap();
 
             port.write(write_text_command.as_slice()).ok(); // TODO handle errors
+        }
+        APICommand::SoftReset => {
+            port.write(
+                Packet::new(
+                    vec![sign],
+                    vec![Command::WriteSpecial(WriteSpecial::SoftReset(SoftReset {}))],
+                )
+                .encode()
+                .unwrap()
+                .as_slice(),
+            )
+            .ok();
         }
         APICommand::ReadText(command, tx) => {
             let read_text_command = Packet::new(vec![sign], vec![Command::ReadText(command)])

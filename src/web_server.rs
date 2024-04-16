@@ -39,6 +39,7 @@ pub enum APIResponse {
 pub enum APICommand {
     WriteText(WriteText),
     ReadText(ReadText, Sender<APIResponse>),
+    SoftReset,
 }
 
 impl AppState {
@@ -92,6 +93,7 @@ pub fn app(state: AppState) -> Router {
         //.route("/script", post(post_script_handler))
         .route("/text/:textKey", put(put_text_handler))
         .route("/text/get/:label", get(get_text_handler))
+        .route("/reset", get(get_soft_reset_handler))
         .layer(middleware)
         .with_state(state)
         .fallback_service(ServeDir::new("static"))
@@ -167,4 +169,10 @@ async fn get_text_handler(
         Ok(APIResponse::ReadText(t)) => Json(GetTextResponse { text: t }).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+#[axum::debug_handler]
+async fn get_soft_reset_handler(state: State<AppState>) -> impl IntoResponse {
+    state.command_tx.send(APICommand::SoftReset).ok();
+    StatusCode::OK
 }
