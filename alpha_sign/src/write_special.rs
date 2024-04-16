@@ -6,6 +6,7 @@ use nom::character::complete::one_of;
 use nom::combinator::map;
 use nom::combinator::map_res;
 use nom::combinator::opt;
+use nom::combinator::value;
 use nom::multi::count;
 use nom::sequence::delimited;
 use nom::sequence::pair;
@@ -160,7 +161,15 @@ impl ToggleSpeaker {
         res
     }
     fn parse(input: ParseInput) -> ParseResult<Self> {
-        todo!()
+        let (remain, parse) = preceded(
+            char(0x21.into()),
+            alt((
+                value(true, tag([0x30, 0x30])),
+                value(false, tag([0x46, 0x46])),
+            )),
+        )(input)?;
+
+        Ok((remain, ToggleSpeaker::new(parse)))
     }
 }
 #[derive(Debug, PartialEq, Eq)]
