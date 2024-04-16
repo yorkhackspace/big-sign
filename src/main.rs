@@ -129,16 +129,14 @@ async fn talk_to_sign(
 async fn handle_command(sign: SignSelector, port: &mut Box<dyn SerialPort>, command: APICommand) {
     match command {
         APICommand::WriteText(text) => {
-            let write_text_command = Packet::new(vec![sign], vec![Command::WriteText(text)])
-                .encode()
-                .unwrap();
+            let write_text_command =
+                Packet::new(vec![sign], vec![Command::WriteText(text)]).encode();
 
             port.write(write_text_command.as_slice()).ok(); // TODO handle errors
         }
         APICommand::ReadText(command, tx) => {
-            let read_text_command = Packet::new(vec![sign], vec![Command::ReadText(command)])
-                .encode()
-                .expect("making text command");
+            let read_text_command =
+                Packet::new(vec![sign], vec![Command::ReadText(command)]).encode();
 
             port.write(read_text_command.as_slice()).ok();
 
