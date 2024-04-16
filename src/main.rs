@@ -1,11 +1,15 @@
 mod web_server;
 
 use crate::web_server::{app, AppState};
-use alpha_sign::AlphaSign;
+use alpha_sign::text::WriteText;
 use alpha_sign::Command;
+use alpha_sign::Packet;
+use alpha_sign::SignSelector;
 use clap::Parser;
 // use rhai::EvalAltResult;
 use serialport::SerialPort;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::{
     net::{Ipv4Addr, SocketAddr},
     //    thread,
@@ -37,7 +41,7 @@ async fn main() {
 
     tracing::info!("🦊 Hello YHS! 🦊");
 
-    let port: Box<dyn SerialPort> = serialport::new(args.port.as_str(), args.baudrate)
+    let mut port: Box<dyn SerialPort> = serialport::new(args.port.as_str(), args.baudrate)
         .timeout(Duration::from_millis(1000))
         .parity(serialport::Parity::None)
         .data_bits(serialport::DataBits::Eight)
@@ -45,8 +49,8 @@ async fn main() {
         .open()
         .expect("Failed to open port");
 
-    let yhs_sign = AlphaSign::default();
-    // yhs_sign.checksum = false;
+    let yhs_selector = SignSelector::default();
+    // yhs_selector.checksum = false;
 
     let (sign_command_tx, sign_command_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -55,7 +59,7 @@ async fn main() {
 
     let app_state = web_server::AppState::new(sign_command_tx);
 
-    let message_loop = talk_to_sign(yhs_sign, port, sign_command_rx, cancel_sign_task);
+    let message_loop = talk_to_sign(yhs_selector, port, sign_command_rx, cancel_sign_task);
     let http_api = serve_api(app_state, 8080);
 
     select! {
@@ -91,19 +95,18 @@ fn init_logging() {
 /// * `message_rx`: Receiver for commands to be handled.
 /// * `cancel`: [`CancellationToken`] that can be used to stop the task from running.
 async fn talk_to_sign(
-    sign: AlphaSign,
-    port: Box<dyn SerialPort>,
+    sign: SignSelector,
+    mut port: Box<dyn SerialPort>,
     mut message_rx: tokio::sync::mpsc::UnboundedReceiver<APICommand>,
     cancel: CancellationToken,
 ) {
-    let port_lock = tokio::sync::Mutex::new(port);
     while !cancel.is_cancelled() {
         select! {
             _ = cancel.cancelled() => {},
             message = message_rx.recv() => {
                 match message {
                     Some(command) => {
-                        handle_command(&sign, &port_lock, command).await;
+                        handle_command(sign, &mut port, command).await;
                     }
                     None => {
                         tracing::debug!(
@@ -123,19 +126,33 @@ async fn talk_to_sign(
 /// * `sign`: The sign to send commands to.
 /// * `port`: the serial port to send things down
 /// * `command`: The command to handle.
-async fn handle_command(
-    sign: &AlphaSign,
-    port: &tokio::sync::Mutex<Box<dyn SerialPort>>,
-    // rhai_engine: &rhai::Engine,
-    command: APICommand,
-) {
+async fn handle_command(sign: SignSelector, port: &mut Box<dyn SerialPort>, command: APICommand) {
     match command {
         APICommand::WriteText(text) => {
-            let mut port_lock = port.lock().await;
-            let write_text_command = sign.encode(Command::WriteText(text)).unwrap();
+            let write_text_command = Packet::new(vec![sign], vec![Command::WriteText(text)])
+                .encode()
+                .unwrap();
 
-            port_lock.write(write_text_command.as_slice()).ok(); // TODO handle errors
-            println!("{:X?}", write_text_command);
+            port.write(write_text_command.as_slice()).ok(); // TODO handle errors
+        }
+        APICommand::ReadText(command, tx) => {
+            let read_text_command = Packet::new(vec![sign], vec![Command::ReadText(command)])
+                .encode()
+                .expect("making text command");
+
+            port.write(read_text_command.as_slice()).ok();
+
+            let mut bufreader = BufReader::new(port);
+
+            let mut buf: Vec<u8> = vec![];
+
+            bufreader.read_until(0x04, &mut buf).ok();
+
+            let (_, parse) = Packet::parse(buf.as_slice()).expect("error parsing response"); // TODO error handling
+
+            if let Command::WriteText(WriteText { message: t, .. }) = &parse.commands[0] {
+                tx.send(web_server::APIResponse::ReadText(t.clone())).ok();
+            }
         }
     }
 }

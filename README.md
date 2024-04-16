@@ -17,6 +17,19 @@ The request body should be:
 }
 ```
 
+###  `GET /text/get/:label`
+e.g. `GET /text/get/A`
+
+Gets text from a given label from the sign. The response will be blank if the label does not contain text or is uninitialised.
+
+The response body should be:
+```json
+{
+    "text": "Text from the sign's memory"
+}
+```
+
+
 ## Building
 
 the backend is built the normal rust way with `cargo build`, if you want to crossbuild for the pi grab the aarch64-unknown-linux-gnu gcc toolchain and run `cargo build  --target aarch64-unknown-linux-gnu`.
