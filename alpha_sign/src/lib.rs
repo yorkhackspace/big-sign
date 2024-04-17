@@ -185,13 +185,13 @@ impl Command {
     }
 
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        Ok(alt((
-            map(text::WriteText::parse, |x| Command::WriteText(x)),
-            map(text::ReadText::parse, |x| Command::ReadText(x)),
+        alt((
+            map(text::WriteText::parse, Command::WriteText),
+            map(text::ReadText::parse, Command::ReadText),
             map(write_special::WriteSpecial::parse, |x| {
                 Command::WriteSpecial(x)
             }),
-        ))(input)?)
+        ))(input)
     }
 }
 

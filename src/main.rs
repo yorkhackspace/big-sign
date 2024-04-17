@@ -41,7 +41,7 @@ async fn main() {
 
     tracing::info!("🦊 Hello YHS! 🦊");
 
-    let mut port: Box<dyn SerialPort> = serialport::new(args.port.as_str(), args.baudrate)
+    let port: Box<dyn SerialPort> = serialport::new(args.port.as_str(), args.baudrate)
         .timeout(Duration::from_millis(1000))
         .parity(serialport::Parity::None)
         .data_bits(serialport::DataBits::Eight)

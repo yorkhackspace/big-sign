@@ -68,33 +68,33 @@ impl WriteSpecial {
     }
 
     pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        Ok(delimited(
+        delimited(
             tag([0x02, Self::COMMANDCODE]),
             alt((
-                map(SetTime::parse, |x| WriteSpecial::SetTime(x)),
-                map(ToggleSpeaker::parse, |x| WriteSpecial::ToggleSpeaker(x)),
-                map(ConfigureMemory::parse, |x| WriteSpecial::ConfigureMemory(x)),
+                map(SetTime::parse, WriteSpecial::SetTime),
+                map(ToggleSpeaker::parse, WriteSpecial::ToggleSpeaker),
+                map(ConfigureMemory::parse, WriteSpecial::ConfigureMemory),
                 map(ClearMemoryAndFlash::parse, |x| {
                     WriteSpecial::ClearMemoryAndFlash(x)
                 }),
-                map(SetDayOfWeek::parse, |x| WriteSpecial::SetDayOfWeek(x)),
-                map(SetTimeFormat::parse, |x| WriteSpecial::SetTimeFormat(x)),
+                map(SetDayOfWeek::parse, WriteSpecial::SetDayOfWeek),
+                map(SetTimeFormat::parse, WriteSpecial::SetTimeFormat),
                 map(GenerateSpeakerTone::parse, |x| {
                     WriteSpecial::GenerateSpeakerTone(x)
                 }),
-                map(SetRunTimeTable::parse, |x| WriteSpecial::SetRunTimeTable(x)),
+                map(SetRunTimeTable::parse, WriteSpecial::SetRunTimeTable),
                 // TODO displayatXY position
-                map(SoftReset::parse, |x| WriteSpecial::SoftReset(x)),
-                map(SetRunSequence::parse, |x| WriteSpecial::SetRunSequence(x)),
+                map(SoftReset::parse, WriteSpecial::SoftReset),
+                map(SetRunSequence::parse, WriteSpecial::SetRunSequence),
                 // TODO setDimmingRegister
                 // TODO set dimming times
-                map(SetRunDayTable::parse, |x| WriteSpecial::SetRunDayTable(x)),
+                map(SetRunDayTable::parse, WriteSpecial::SetRunDayTable),
                 map(ClearSerialErrorStatusRegister::parse, |x| {
                     WriteSpecial::ClearSerialErrorStatusRegister(x)
                 }),
             )),
             opt(preceded(char(0x03.into()), count(hex_digit0, 4))),
-        )(input)?)
+        )(input)
     }
 }
 #[derive(Debug, PartialEq, Eq)]
@@ -118,7 +118,7 @@ impl SetTime {
         res
     }
 
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    pub fn parse(input: ParseInput) -> ParseResult<Self> {
         let (remain, parse) = preceded(
             char(0x20.into()),
             pair(
@@ -192,7 +192,7 @@ impl StartStopTime {
     pub fn time(&self) -> Time {
         self.time
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -223,7 +223,7 @@ impl OnPeriod {
         };
         format!("{start:0<2X}{end:0<2X}", start = res[0], end = res[1]).into_bytes()
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -290,7 +290,7 @@ impl MemoryConfiguration {
         res.append(&mut file_config);
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -328,12 +328,18 @@ impl ConfigureMemory {
         }
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
 #[derive(Debug, PartialEq, Eq)]
 pub struct ClearMemoryAndFlash {}
+
+impl Default for ClearMemoryAndFlash {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ClearMemoryAndFlash {
     const SPECIAL_LABEL: &'static [u8] = &[0x24, 0x24, 0x24, 0x24];
@@ -345,7 +351,7 @@ impl ClearMemoryAndFlash {
     fn encode(&self) -> Vec<u8> {
         Self::SPECIAL_LABEL.into()
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -375,7 +381,7 @@ impl SetDayOfWeek {
         res.push(day);
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -401,7 +407,7 @@ impl SetTimeFormat {
 
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -461,7 +467,7 @@ impl ProgrammmableTone {
         );
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -504,7 +510,7 @@ impl GenerateSpeakerTone {
         }
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -525,7 +531,7 @@ impl RunTimeTable {
         res.append(&mut self.on_period.encode());
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -549,13 +555,19 @@ impl SetRunTimeTable {
         }
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct SoftReset {}
+
+impl Default for SoftReset {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl SoftReset {
     const SPECIAL_LABEL: &'static [u8] = &[0x2c];
@@ -568,7 +580,7 @@ impl SoftReset {
         let res: Vec<u8> = Self::SPECIAL_LABEL.into();
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -619,7 +631,7 @@ impl SetRunSequence {
         }
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -670,7 +682,7 @@ impl RunDays {
             }
         }
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -693,7 +705,7 @@ impl SetRunDayTable {
         res.append(&mut self.run_days.encode());
         res
     }
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }
@@ -701,6 +713,12 @@ impl SetRunDayTable {
 pub struct ClearSerialErrorStatusRegister {
     //TODO confirm whether this is correct, the
     //documentation sucks
+}
+
+impl Default for ClearSerialErrorStatusRegister {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ClearSerialErrorStatusRegister {
@@ -715,7 +733,7 @@ impl ClearSerialErrorStatusRegister {
         res
     }
 
-    fn parse(input: ParseInput) -> ParseResult<Self> {
+    fn parse(_input: ParseInput) -> ParseResult<Self> {
         todo!()
     }
 }

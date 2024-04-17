@@ -67,9 +67,9 @@ pub enum TransitionMode {
     TrumpetAnimation,
     CycleColors,
 }
-impl Into<Vec<u8>> for TransitionMode {
-    fn into(self) -> Vec<u8> {
-        match self {
+impl From<TransitionMode> for Vec<u8> {
+    fn from(val: TransitionMode) -> Self {
+        match val {
             TransitionMode::Rotate => vec![0x61],
             TransitionMode::Hold => vec![0x62],
             TransitionMode::Flash => vec![0x63],
@@ -214,7 +214,7 @@ impl WriteText {
             res.push(self.position as u8);
             res.append(&mut self.mode.into());
         }
-        res.extend_from_slice(self.message.as_bytes().into());
+        res.extend_from_slice(self.message.as_bytes());
         res
     }
 

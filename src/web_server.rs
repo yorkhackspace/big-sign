@@ -2,7 +2,6 @@ use std::{sync::Arc, time::Duration};
 
 use alpha_sign::{
     text::{ReadText, WriteText},
-    Packet,
 };
 use axum::{
     body::Bytes,

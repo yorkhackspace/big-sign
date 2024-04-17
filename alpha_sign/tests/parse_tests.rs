@@ -6,7 +6,7 @@ use alpha_sign::write_special::WriteSpecial;
 use alpha_sign::Command;
 use alpha_sign::Packet;
 use alpha_sign::SignSelector;
-use time;
+
 use time::Time;
 
 #[test]
@@ -16,7 +16,7 @@ fn test_parse_write_text() {
         vec![Command::WriteText(WriteText::new('A', "test".to_string()))],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
@@ -30,7 +30,7 @@ fn test_parse_read_text() {
         vec![Command::ReadText(ReadText::new('A'))],
     );
 
-    match Packet::parse(pkt.encode().unwrap().as_slice()) {
+    match Packet::parse(pkt.encode().as_slice()) {
         Ok((_, res)) => assert_eq!(pkt, res),
         Err(e) => println!("{:#?}", e),
     };
@@ -45,7 +45,7 @@ fn test_parse_set_time() {
         )))],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
@@ -61,7 +61,7 @@ fn test_parse_toggle_speaker_on() {
         ))],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
@@ -77,7 +77,7 @@ fn test_parse_toggle_speaker_off() {
         ))],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
@@ -97,7 +97,7 @@ fn test_parse_multiple_selectors() {
         vec![Command::WriteText(WriteText::new('A', "test".to_string()))],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
@@ -114,7 +114,7 @@ fn test_parse_multiple_commands() {
         ],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
@@ -131,7 +131,7 @@ fn test_parse_multiple_different_commands() {
         ],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
@@ -154,7 +154,7 @@ fn test_parse_multiple_commands_and_selectors() {
         ],
     );
 
-    let Ok((_, res)) = Packet::parse(pkt.encode().unwrap().as_slice()) else {
+    let Ok((_, res)) = Packet::parse(pkt.encode().as_slice()) else {
         panic!()
     };
 
