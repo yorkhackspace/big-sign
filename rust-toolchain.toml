@@ -1,3 +1,3 @@
 [toolchain]
-channel = "stable"
-components = [ "rust-src", "cargo", "rustc" ]
+channel = "1.85.0"
+components = ["rust-src", "cargo", "rustc"]

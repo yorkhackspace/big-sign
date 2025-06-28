@@ -1,63 +1,18 @@
-use nom::{
-    branch::alt,
-    bytes::complete::take_while,
-    character::{complete::char, is_hex_digit},
-    combinator::{map, map_opt, map_res, opt},
-    multi::{many0, many1, many_m_n},
-    number::complete::u8,
-    sequence::{pair, preceded, terminated, tuple},
-};
-
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-
-use std::str;
+use strum::{Display, EnumString};
 
 pub mod text;
 pub mod write_special;
 
-pub type ParseInput<'a> = &'a [u8];
-pub type ParseResult<'a, O> =
-    nom::IResult<ParseInput<'a>, O, nom::error::VerboseError<ParseInput<'a>>>;
-
 pub const BROADCAST: u8 = 0x00;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SignSelector {
     pub sign_type: SignType,
     pub address: u8,
 }
 
-impl Default for SignSelector {
-    fn default() -> SignSelector {
-        SignSelector {
-            sign_type: SignType::All,
-            address: 0,
-        }
-    }
-}
-
-impl SignSelector {
-    pub fn new(sign_type: SignType, address: u8) -> Self {
-        SignSelector { sign_type, address }
-    }
-
-    pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        let (remain, res) = pair(
-            map_opt(u8, SignType::from_u8),
-            map_res(take_while(is_hex_digit), |x| {
-                u8::from_str_radix(str::from_utf8(x).unwrap(), 16)
-            }),
-        )(input)?;
-
-        Ok((
-            remain,
-            SignSelector {
-                sign_type: res.0,
-                address: res.1,
-            },
-        ))
-    }
+pub struct AlphaSign {
+    pub sign_selectors: Vec<SignSelector>,
+    pub checksum: bool,
 }
 
 #[derive(Debug)]
@@ -65,70 +20,103 @@ pub enum SignError {
     EncodingError(String),
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct Packet {
-    pub selectors: Vec<SignSelector>,
-    pub commands: Vec<Command>,
-}
-
-impl Packet {
-    pub fn new(selectors: Vec<SignSelector>, commands: Vec<Command>) -> Self {
-        //TODO maybe make this validate that read cant be not last
-        Self {
-            selectors,
-            commands,
+impl AlphaSign {
+    pub fn encode_multiple(&self, commands: Vec<Command>) -> Result<Vec<u8>, SignError> {
+        if self.checksum {
+            let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
+            for selector in &self.sign_selectors {
+                res.push(selector.sign_type as u8);
+                res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
+            }
+            for command in &commands {
+                let mut command_section: Vec<u8> = vec![0x02]; //start of command
+                command_section.append(&mut command.encode());
+                command_section.push(0x03); //end of command
+                if self.checksum {
+                    let mut sum: u16 = 0;
+                    for byte in command_section.clone() {
+                        sum += byte as u16;
+                    }
+                    command_section.append(&mut format!("{sum:0>4X}").into_bytes())
+                }
+                res.append(&mut command_section);
+            }
+            if commands.len() == 1 {
+                res.pop(); // remove trailing 0x03 if it isn't needed (this breaks otherwise for some reason)
+            }
+            res.push(0x04); //end of transmission
+            Ok(res)
+        } else {
+            Err(SignError::EncodingError(
+                "Cannot encode multiple messages to one packet if checksums are disabled"
+                    .to_string(),
+            ))
         }
     }
-
-    pub fn encode(&self) -> Result<Vec<u8>, SignError> {
+    pub fn encode(&self, command: Command) -> Result<Vec<u8>, SignError> {
         let mut res: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01]; //start of transmission
-        for selector in &self.selectors {
+        for selector in &self.sign_selectors {
             res.push(selector.sign_type as u8);
             res.append(&mut format!("{address:0>2X}", address = selector.address).into_bytes());
-            res.push(0x2c);
         }
-        res.pop(); // remove trailing comma
-        for command in &self.commands {
-            let mut command_section: Vec<u8> = vec![0x02]; //start of command
-            command_section.append(&mut command.encode());
-            command_section.push(0x03); //end of command
+        let mut command_section: Vec<u8> = vec![0x02]; //start of command
+        command_section.append(&mut command.encode());
+        if self.checksum {
+            command_section.push(0x03);
             let mut sum: u16 = 0;
             for byte in command_section.clone() {
                 sum += byte as u16;
             }
-            command_section.append(&mut format!("{sum:0>4X}").into_bytes());
-            res.append(&mut command_section);
+            command_section.append(&mut format!("{sum:0>4X}").into_bytes())
         }
+        res.append(&mut command_section);
         res.push(0x04); //end of transmission
         Ok(res)
     }
+}
 
-    pub fn parse(packet: ParseInput) -> ParseResult<Self> {
-        let (remaining, result) = tuple((
-            preceded(
-                pair(
-                    many_m_n(5, 100, char(0x00.into())),         // starting nulls
-                    nom::character::complete::char(0x01.into()), // start of transmission
-                ),
-                many1(terminated(SignSelector::parse, opt(char(',')))),
-            ),
-            terminated(
-                many0(Command::parse),
-                nom::character::complete::char(0x04.into()), // commands
-            ),
-        ))(packet)?;
-
-        Ok((
-            remaining,
-            Packet {
-                selectors: result.0,
-                commands: result.1,
-            },
-        ))
+impl Default for AlphaSign {
+    fn default() -> Self {
+        AlphaSign {
+            sign_selectors: vec![SignSelector {
+                sign_type: SignType::All,
+                address: BROADCAST,
+            }],
+            checksum: true,
+        }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Hash, EnumString, Display)]
+pub enum SignFileNames {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+}
+
 pub enum Command {
     WriteText(text::WriteText),
     ReadText(text::ReadText),
@@ -151,20 +139,10 @@ impl Command {
             Command::WriteSpecial(_) => false,
         }
     }
-
-    pub fn parse(input: ParseInput) -> ParseResult<Self> {
-        Ok(alt((
-            map(text::WriteText::parse, |x| Command::WriteText(x)),
-            map(text::ReadText::parse, |x| Command::ReadText(x)),
-            map(write_special::WriteSpecial::parse, |x| {
-                Command::WriteSpecial(x)
-            }),
-        ))(input)?)
-    }
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, FromPrimitive, PartialEq, Eq)]
+#[derive(Copy, Clone)]
 pub enum SignType {
     SignWithVisualVerification = 0x21,
     SerialClock = 0x22,
@@ -172,7 +150,6 @@ pub enum SignType {
     FullMatrixAlphaVision = 0x24,
     CharacterMatrixAlphaVision = 0x25,
     LineMatrixAlphaVision = 0x26,
-    ResponsePacket = 0x30,
     OneLineSign = 0x31,
     TwoLineSign = 0x32,
     AllSigns = 0x3f,
@@ -215,3 +192,6 @@ pub enum SignType {
     TemperatureProbe = 0x79,
     AllSignsWithMemoryConfiguredFor26Files = 0x7a,
 }
+
+#[cfg(test)]
+mod tests {}

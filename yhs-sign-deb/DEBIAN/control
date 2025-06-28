@@ -1,0 +1,6 @@
+Package: yhs-sign
+Version: 1.0-1
+Section: base
+Priority: optional
+Architecture: arm64
+Description: Package to provide an API for talking to the YHS BIG sign.

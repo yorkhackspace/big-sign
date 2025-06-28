@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+
+# This can fail if the sign user already exists.
+# We could be smarter about checking this if, dear reader,
+# one were feeling enthusiastic about it
+useradd -G dialout sign || true
+
+chown root:dialout /usr/bin/yhs-sign
+systemctl enable yhs-sign.service
+systemctl restart yhs-sign.service
+# Path referenced elsewhere, search for
+# fd3e6cfb-3a3b-4b66-8eb2-5d54d6c91215
+mkdir -p /var/data/yhs-sign
+chown -R sign:sign /var/data/yhs-sign

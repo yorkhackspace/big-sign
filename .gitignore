@@ -19,3 +19,7 @@ frontend/node_modules
 frontend/dist
 frontend/dist-ssr
 frontend/*.local
+
+# Deb build
+/yhs-sign-deb/usr/bin/yhs-sign
+/yhs-sign.deb

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>big-sign > help</title>
+    </head>
+    <body>
+        <h1>Help</h1>
+        <p>
+            Send a PUT to http://big-sign.yhs:8080/topics/[SOME_TOPIC] containing
+            a JSON object like so:
+        </p>
+        <code>
+            {
+                "lines": [
+                    "Each of these lines will be shown",
+                    "one at a time",
+                    "in order"
+                ]
+            }
+        </code>
+        <p>
+            On push, your message will be shown immediately, then enter the rotation
+            of other topics.
+        </p>
+        <p>
+            You can use any name you like for the topic (they will be visible to others!),
+            re-using a topic Id will replace the contents of the topic.
+        </p>
+        <p>
+            There is a line-length limit of 60 characters. There's not limit on the number
+            of lines per topic but bear in mind that annoyingly long messages are likely
+            to be removed by others ;)
+        </p>
+    </body>
+</html>
